@@ -94,5 +94,43 @@ With some effort, it is possible to turn this into a "real" preprocessor. See
 `Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
 done.
 
+Tutorial 03: Include files
+---
+
+If you feed something with an `#include` line into our program, chances are
+that it does not work:
+
+    XXX cat etc
+
+(The "%0" output is because we don't fill in the arguments from the `Strs`
+array).
+
+We need to tell the preprocessor where it can find its header files. Where
+standard include files are stored depends on your system. On Leopard, they are
+in
+
+    XXX
+
+You add those paths via the `HeaderSearch` object. Its `SetSearchPaths()`
+method takes a list of `DirectoryLookup`s (user headers at the front, system
+headers after them), an index that specifies the first system header, and a
+flag if the current directory should be searched for include files as well.
+
+    XXX
+
+See `tut03_pp.cpp`. This only adds system paths for now.
+
+Tutorial 04: Parsing the file
+---
+
+The preprocessor gives us a stream of tokens. We could now write a parser that
+parses that token stream into an AST. Luckily, clang can do this for us.
+
+`Action`, `MinimalAction`.
+
+Change linker flags.
+
+Tutorial 05: Doing something interesting
+---
 
  vim:set tw=78:
