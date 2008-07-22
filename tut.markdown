@@ -10,6 +10,10 @@ See llvm-svn/tools/clang/docs/InternalsManual.html for a very rough overview.
 * Parser
 * Actions: Sema, diagnostics
 
+clang does not have a stable API, so this tutorial might not be completely
+up-to-date. The last time I checked that all programs work was
+**Jul 22, 2008**.
+
 Tutorial 01: The bare minimum
 ---
 
@@ -29,8 +33,9 @@ Next up is `LangOptions`. This is easy, as its constructor does not take any
 parameters.
 
 The `TargetInfo` is easy, too, but we need to call a factory method as the
-constructor is private. (XXX: What's this good for in the PP?) Need to delete
-this at the end of the program.
+constructor is private. Required so that the preprocessor can add
+target-specific defines, for example `__APPLE__`.  Need to delete this at the
+end of the program.
 
 `SourceManager`.
 
@@ -46,6 +51,48 @@ Need to compile with `-fno-rtti`, because clang is compiled that way, too. Else,
 when linking.
 
 See `tut01_pp.cpp`
+
+Tutorial 02: Processing a file
+---
+
+Right now, the program is not very interesting. It does not do anything yet.
+We want to change the program so that it feeds C files into the preprocessor
+object.
+
+    pp.EnterSourceFile(sm.createFileID(File, SourceLocation()), 0);
+
+Instead:
+
+    sm.createMainFileID(File, SourceLocation());
+    pp.EnterMainSourceFile();
+
+
+Parse loop:
+
+    Token Tok;
+    do {
+      pp.Lex(Tok);
+      pp.DumpToken(Tok);
+      cerr << endl;
+    } while (Tok.isNot(tok::eof));
+
+See `tut02_pp.cpp`. This is a very complete preprocessor, it handles all kinds
+of corner cases correclty already. It also strips comments. Play around with
+it a bit:
+
+    XXX cat input01.c, show output
+
+However, invalid input does not yet produce any error messages. That's because
+our `DummyDiagnosticClient` does not yet produce any output. Let's change
+this:
+
+    XXX
+
+XXX: incomplete. Now, we get error output.
+
+With some effort, it is possible to turn this into a "real" preprocessor. See
+`Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
+done.
 
 
  vim:set tw=78:
