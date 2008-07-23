@@ -21,6 +21,9 @@ Let's try to create `Preprocessor` object. Remember, this is how you
 communicate with the lexer. Our first program will not do anything useful,
 it only constructs a `Preprocessor` and exits again.
 
+(XXX: it's possible to directly create a lexer as well; see `HTMLRewrite.cpp`.
+This is for example useful in raw mode.)
+
 The constructor takes no less than 5 arguments: A `Diagnostic` object, a
 `LangOptions` object, a `TargetInfo` object, a `SourceManager` object, and
 finally a `HeaderSearch` object. Let's break down what those objects are good
@@ -164,5 +167,32 @@ will have the following `DeclaratorChunk`s:
     XXX
 
 `DeclSpec` itself stores storage specifiers, type, etc.
+
+Need to change include dir type to ignore stuff from system headers.
+
+Tutorial 06: Doing semantic analysis with clang
+---
+
+Interface to sema is very minimalistic: Just a single function. Behind the
+scenes, that function builds a `Parser` object and passes it an `Action` that
+does the semantic analysis. The `Action` builds an AST while doing this.
+
+We can now get rid of our `MyAction`. Instead, we do now need an
+`ASTConsumer` (which will be deleted by sema).
+
+BTW: last param prints stats. clang is obsessed with having a low memory
+consumption :-)
+
+`ParseAST()` also calls `EnterMainSourceFile()` on the preprocessor. So don't
+call this yourself, else you get errors about duplicate definitions (because
+the main source file is entered twice into the pp's file list).
+
+
+
+Wrap up
+---
+
+clang is somewhat modular: you can plug in a new parser as long as it conforms to
+the `Action` interface, several ast consumers can be used, etc.
 
  vim:set tw=78:
