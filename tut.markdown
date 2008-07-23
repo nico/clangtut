@@ -196,4 +196,11 @@ Wrap up
 clang is somewhat modular: you can plug in a new parser as long as it conforms to
 the `Action` interface, several ast consumers can be used, etc.
 
+
+questions
+---
+
+* Why does `-ast-dump` only print the first var in a decl?
+* Why is `funcpointertype fp3` special?
+
  vim:set tw=78:

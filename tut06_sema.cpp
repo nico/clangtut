@@ -70,10 +70,9 @@ void addIncludePath(vector<DirectoryLookup>& paths,
 class MyASTConsumer : public ASTConsumer {
 public:
   virtual void HandleTopLevelDecl(Decl *D) {
-    // XXX: need to check for all ScopedDecl subclasses, those imply that
-    // D is not a variable...
+    // XXX: does not print c in `int b, c;`.
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->isFileVarDecl())
+      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
         cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
     }
   }
