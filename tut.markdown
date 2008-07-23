@@ -133,4 +133,35 @@ Change linker flags.
 Tutorial 05: Doing something interesting
 ---
 
+`DeclTy` etc are abstract in parser. It calls method on the `Action` to create
+them and then passes them again to the action object.
+
+Actually surprisingly tricky. Eli Friedman:
+
+> Fundamentally, in C, it's impossible to
+> tell apart a global function declaration and a global variable
+> declaration without resolving typedefs and __typeof expressions.
+> Since that's beyond the scope of the parser, you'll either need to use
+> Sema, do these yourself, or be a bit conservative about printing out
+> things that aren't actually globals.
+> 
+> Examples of function declarations without an explicit type declarator:
+> 
+>     typedef int x();
+>     x z;
+>     __typeof(z) r;
+
+`ActOnDeclarator()`.
+
+`DeclSpec` contains information about the declaration. `DeclaratorChunk`s
+store modifiers like pointer, array, reference, or function. For example,
+
+    int** (*bla[16]()[];
+
+will have the following `DeclaratorChunk`s:
+
+    XXX
+
+`DeclSpec` itself stores storage specifiers, type, etc.
+
  vim:set tw=78:
