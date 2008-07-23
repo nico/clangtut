@@ -151,7 +151,8 @@ Actually surprisingly tricky. Eli Friedman:
 >     x z;
 >     __typeof(z) r;
 
-`ActOnDeclarator()`.
+`ActOnDeclarator()` (then mayhaps `AddInitializerToDecl`, then
+`FinalizeDeclaratorGroup`. example with several decls in one line).
 
 `DeclSpec` contains information about the declaration. `DeclaratorChunk`s
 store modifiers like pointer, array, reference, or function. For example,

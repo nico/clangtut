@@ -49,6 +49,7 @@ public:
 
 void addIncludePath(vector<DirectoryLookup>& paths,
     const string& path,
+    DirectoryLookup::DirType type,
     FileManager& fm)
 {
   // If the directory exists, add it.
@@ -56,59 +57,55 @@ void addIncludePath(vector<DirectoryLookup>& paths,
                                                  &path[0]+path.size())) {
     bool isFramework = false;
     bool isUserSupplied = false;
-    paths.push_back(DirectoryLookup(DE, DirectoryLookup::NormalHeaderDir,
-          isUserSupplied, isFramework));
+    paths.push_back(DirectoryLookup(DE, type, isUserSupplied, isFramework));
     return;
   }
   cerr << "Cannot find directory " << path << endl;
 }
 
 class MyAction : public MinimalAction {
+  const Preprocessor& pp;
 public:
-  MyAction(IdentifierTable& tab) : MinimalAction(tab) {}
-
-  //virtual StmtResult ActOnDeclStmt(DeclTy *Decl, SourceLocation StartLoc,
-                                   //SourceLocation EndLoc) {
-    //cerr << "Found declstmt " << Decl << endl;
-    //return MinimalAction::ActOnDeclStmt(Decl, StartLoc, EndLoc);
-  //}
+  MyAction(IdentifierTable& tab, const Preprocessor& prep)
+    : MinimalAction(tab), pp(prep) {}
 
   Action::DeclTy *
   ActOnDeclarator(Scope *S, Declarator &D, DeclTy *LastInGroup) {
     // Print names of global variables. Differentiating between
     // global variables and global functions is Hard in C, so this
     // is only an approximation.
+
+    // Only global declarations...
     if (D.getContext() == Declarator::FileContext) {
       IdentifierInfo *II = D.getIdentifier();
       const DeclSpec& DS = D.getDeclSpec();
 
+      // ...that aren't typedefs or `extern` declarations...
       if (DS.getStorageClassSpec() != DeclSpec::SCS_extern
           && DS.getStorageClassSpec() != DeclSpec::SCS_typedef) {
 
-
+        // ...and no functions...
         if (D.getNumTypeObjects() == 0 ||
             D.getTypeObject(D.getNumTypeObjects() - 1).Kind
               != DeclaratorChunk::Function) {
-        cerr << "Found global declarator " << II->getName() << endl;
+
+          SourceLocation loc = DS.getTypeSpecTypeLoc();
+          // ...and in a user header
+          SourceManager& sm = pp.getSourceManager();
+          HeaderSearch& headers = pp.getHeaderSearchInfo();
+          const FileEntry *DeclFile = sm.getFileEntryForLoc(loc);
+          if (DeclFile != 0
+              && headers.getFileDirFlavor(DeclFile)
+                  == DirectoryLookup::NormalHeaderDir) {
+            cerr << "Found global user declarator " << II->getName() << endl;
+          }
+          
         }
-        
-        //for (int i = 0; i < D.getNumTypeObjects(); ++i) {
-          //DeclaratorChunk dc = D.getTypeObject(i);
-          //cerr << dc.Kind << " ";
-        //}
-        //cerr << endl;
       }
     }
 
     return MinimalAction::ActOnDeclarator(S, D, LastInGroup);
   }
-  //virtual void AddInitializerToDecl(DeclTy *Dcl, ExprTy *Init) {
-    //cerr << "Initializer found " << endl;
-  //}
-  //virtual DeclTy *FinalizeDeclaratorGroup(Scope *S, DeclTy *Group) {
-    ////cerr << "finalize declarator" << endl;
-    //return MinimalAction::FinalizeDeclaratorGroup(S, Group);
-  //}
 };
 
 
@@ -145,9 +142,12 @@ int main(int argc, char* argv[])
   unsigned systemDirIdx = dirs.size();
 
   // system headers
-  addIncludePath(dirs, "/usr/include", fm);
-  addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include", fm);
-  addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include", fm);
+  addIncludePath(dirs, "/usr/include",
+      DirectoryLookup::SystemHeaderDir, fm);
+  addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
+      DirectoryLookup::SystemHeaderDir, fm);
+  addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
+      DirectoryLookup::SystemHeaderDir, fm);
 
   bool noCurDirSearch = false;  // search current directory, too
   headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
   // Parse it
 
   IdentifierTable tab(opts);
-  MyAction action(tab);
+  MyAction action(tab, pp);
   Parser p(pp, action);
   p.ParseTranslationUnit();
 
