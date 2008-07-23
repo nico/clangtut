@@ -72,9 +72,9 @@ public:
   virtual void HandleTopLevelDecl(Decl *D) {
     // XXX: need to check for all ScopedDecl subclasses, those imply that
     // D is not a variable...
-    if (VarDecl *VD = dyn_cast<VarDecl>(D)
-        && VD->isFileVarDecl()) {
-      cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+    if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      if (VD->isFileVarDecl())
+        cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
     }
   }
 };
