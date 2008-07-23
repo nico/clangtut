@@ -14,6 +14,7 @@ using namespace std;
 #include "clang/Sema/ParseAST.h"
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/Decl.h"
 
 using namespace clang;
 
@@ -65,6 +66,18 @@ void addIncludePath(vector<DirectoryLookup>& paths,
   }
   cerr << "Cannot find directory " << path << endl;
 }
+
+class MyASTConsumer : public ASTConsumer {
+public:
+  virtual void HandleTopLevelDecl(Decl *D) {
+    // XXX: need to check for all ScopedDecl subclasses, those imply that
+    // D is not a variable...
+    if (VarDecl *VD = dyn_cast<VarDecl>(D)
+        && VD->isFileVarDecl()) {
+      cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+    }
+  }
+};
 
 int main(int argc, char* argv[])
 {
@@ -123,7 +136,7 @@ int main(int argc, char* argv[])
 
   // Parse it
 
-  ASTConsumer* c = new ASTConsumer;
+  ASTConsumer* c = new MyASTConsumer;
   ParseAST(pp, c);  // deletes c
 
   delete target;

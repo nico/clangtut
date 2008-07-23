@@ -22,7 +22,8 @@ communicate with the lexer. Our first program will not do anything useful,
 it only constructs a `Preprocessor` and exits again.
 
 (XXX: it's possible to directly create a lexer as well; see `HTMLRewrite.cpp`.
-This is for example useful in raw mode.)
+This is for example useful in raw mode. Perhaps have a "Tut 0" that does
+syntax highlighting only?)
 
 The constructor takes no less than 5 arguments: A `Diagnostic` object, a
 `LangOptions` object, a `TargetInfo` object, a `SourceManager` object, and
