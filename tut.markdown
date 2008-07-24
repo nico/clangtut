@@ -14,6 +14,11 @@ clang does not have a stable API, so this tutorial might not be completely
 up-to-date. The last time I checked that all programs work was
 **Jul 22, 2008**.
 
+Prereq
+---
+
+Checking out, building (graphviz support!), 
+
 Tutorial 01: The bare minimum
 ---
 
@@ -188,6 +193,23 @@ consumption :-)
 call this yourself, else you get errors about duplicate definitions (because
 the main source file is entered twice into the pp's file list).
 
+Now with own `MyASTConsumer`. Code slightly simpler (and much more correct)
+than the former version.
+
+
+Tutorial 07: Support for real programs
+---
+
+-I, -D
+
+http://llvm.org/docs/CommandLine.html
+
+Nice output ?
+
+Tutorial 08: Working with the AST
+---
+
+Find long and nested functions.
 
 
 Wrap up

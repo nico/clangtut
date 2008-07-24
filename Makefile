@@ -8,6 +8,9 @@ LDFLAGS=-lclangBasic -lclangLex -lclangParse -lclangSema -lclangAST \
 		-lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter \
 		 `/Users/nico/src/llvm-svn/Debug/bin/llvm-config --ldflags`
 
+tut07: tut07_sema.o
+	g++ $(LDFLAGS) -o tut07 tut07_sema.o
+
 tut06: tut06_sema.o
 	g++ $(LDFLAGS) -o tut06 tut06_sema.o
 
@@ -26,6 +29,7 @@ tut02: tut02_pp.o
 tut01: tut01_pp.o
 	g++ $(LDFLAGS) -o tut01 tut01_pp.o
 
+tut07_parse.o: tut07_sema.cpp
 tut06_parse.o: tut06_sema.cpp
 tut05_parse.o: tut05_parse.cpp
 tut04_parse.o: tut04_parse.cpp
