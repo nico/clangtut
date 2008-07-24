@@ -127,6 +127,9 @@ flag if the current directory should be searched for include files as well.
 
     XXX
 
+Frameworks are special, they are looked into. Needs to be set e.g. for
+`/Library/Frameworks`.
+
 See `tut03_pp.cpp`. This only adds system paths for now.
 
 Tutorial 04: Parsing the file

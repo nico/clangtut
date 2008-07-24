@@ -33,12 +33,10 @@ public:
                                 const SourceRange *Ranges, 
                                 unsigned NumRanges) {
 
-    cerr << endl;
-
     switch (DiagLevel) {
     default: assert(0 && "Unknown diagnostic type!");
-    case Diagnostic::Note:    cerr << "note: "; break;
-    case Diagnostic::Warning: cerr << "warning: "; break;
+    case Diagnostic::Note:    return; cerr << "note: "; break;
+    case Diagnostic::Warning: return; cerr << "warning: "; break;
     case Diagnostic::Error:   cerr << "error: "; break;
     case Diagnostic::Fatal:   cerr << "fatal error: "; break;
       break;
@@ -58,12 +56,12 @@ public:
 void addIncludePath(vector<DirectoryLookup>& paths,
     const string& path,
     DirectoryLookup::DirType type,
-    FileManager& fm)
+    FileManager& fm,
+    bool isFramework = false)
 {
   // If the directory exists, add it.
   if (const DirectoryEntry *DE = fm.getDirectory(&path[0], 
                                                  &path[0]+path.size())) {
-    bool isFramework = false;
     bool isUserSupplied = false;
     paths.push_back(DirectoryLookup(DE, type, isUserSupplied, isFramework));
     return;
@@ -155,18 +153,30 @@ int main(int argc, char* argv[])
   vector<DirectoryLookup> dirs;
 
   // user headers
-  for (int i = 0; i < I_dirs.size(); ++i)
+  for (int i = 0; i < I_dirs.size(); ++i) {
+    cerr << "adding " << I_dirs[i] << endl;
     addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, fm);
+  }
 
-  unsigned systemDirIdx = dirs.size();
+  // This specifies where in `dirs` the system headers start. Quoted includes
+  // are searched for in all paths, angled includes only in the system headers.
+  // -I can point to the direction of e.g. Carbon.h, which is usually included
+  // in angle brackets. So we add everything to the system headers.
+  unsigned systemDirIdx = 0;
 
   // system headers
   addIncludePath(dirs, "/usr/include",
+      DirectoryLookup::SystemHeaderDir, fm);
+  addIncludePath(dirs, "/usr/local/include",
       DirectoryLookup::SystemHeaderDir, fm);
   addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
       DirectoryLookup::SystemHeaderDir, fm);
   addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
       DirectoryLookup::SystemHeaderDir, fm);
+  addIncludePath(dirs, "/Library/Frameworks",
+      DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
+  addIncludePath(dirs, "/System/Library/Frameworks",
+      DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
 
   bool noCurDirSearch = true;  // do not search in the current directory
   headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
@@ -174,8 +184,10 @@ int main(int argc, char* argv[])
 
   // Add defines passed in through parameters
   vector<char> predefineBuffer;
-  for (int i = 0; i < D_macros.size(); ++i)
+  for (int i = 0; i < D_macros.size(); ++i) {
+    cerr << "defining " << D_macros[i] << endl;
     DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
+  }
   predefineBuffer.push_back('\0');
   pp.setPredefines(&predefineBuffer[0]);
 
@@ -188,7 +200,6 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
   sm.createMainFileID(File, SourceLocation());
-  //pp.EnterMainSourceFile();
 
 
   // Parse it
