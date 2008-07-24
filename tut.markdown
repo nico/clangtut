@@ -209,6 +209,8 @@ http://llvm.org/docs/CommandLine.html
 
 Nice output ?
 
+Also take care of `static`s and print the name of the defining file.
+
 Tutorial 08: Working with the AST
 ---
 

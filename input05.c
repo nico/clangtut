@@ -9,6 +9,8 @@ int test = 8;
 int test2 = 12;
 #endif
 
+static int staticvar = 88;
+
 int a;
 int a = 3;
 

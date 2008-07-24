@@ -16,6 +16,7 @@ using namespace std;
 #include "clang/Sema/ParseAST.h"
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -94,12 +95,22 @@ static void DefineBuiltinMacro(std::vector<char> &Buf, const char *Macro,
 }
 
 class MyASTConsumer : public ASTConsumer {
+  SourceManager *sm;
 public:
+  virtual void Initialize(ASTContext &Context) {
+    sm = &Context.getSourceManager();
+  }
+
   virtual void HandleTopLevelDecl(Decl *D) {
     // XXX: does not print c in `int b, c;`.
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
-        cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
+        FullSourceLoc loc(D->getLocation(), *sm);
+        bool isStatic = VD->getStorageClass() == VarDecl::Static;
+
+        cout << loc.getSourceName() << ": '"
+             << (isStatic?"static ":"") << VD->getName() << "'\n";
+      }
     }
   }
 };
@@ -118,6 +129,7 @@ InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"),
     llvm::cl::Required);
 
 static llvm::cl::list<std::string> IgnoredParams(llvm::cl::Sink);
+static llvm::cl::opt<string> dummy("o", llvm::cl::desc("dummy for gcc compat"));
 
 
 int main(int argc, char* argv[])
@@ -204,10 +216,14 @@ int main(int argc, char* argv[])
 
   // Parse it
 
+  cout << InputFilename << endl << "---" << endl << endl;
+
   ASTConsumer* c = new MyASTConsumer;
   ParseAST(pp, c);  // deletes c
 
   delete target;
+
+  cout << endl;
 
   unsigned NumDiagnostics = diags.getNumDiagnostics();
   
