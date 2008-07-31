@@ -108,7 +108,7 @@ public:
         FullSourceLoc loc(D->getLocation(), *sm);
         bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
-        cout << "    " << loc.getSourceName() << ": "
+        cout << loc.getSourceName() << ": "
              << (isStatic?"static ":"") << VD->getName() << "\n";
       }
     }
@@ -216,10 +216,13 @@ int main(int argc, char* argv[])
 
   // Parse it
 
-  cout << '`' << InputFilename << '`' << endl << "---" << endl << endl;
+  cout << "<h2><code>" << InputFilename << "</code></h2>" << endl << endl;
+  cout << "<pre><code>";
 
   ASTConsumer* c = new MyASTConsumer;
   ParseAST(pp, c);  // deletes c
+
+  cout << "</pre></code>" << endl << endl;
 
   delete target;
 
