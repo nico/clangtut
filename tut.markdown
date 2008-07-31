@@ -130,6 +130,8 @@ flag if the current directory should be searched for include files as well.
 Frameworks are special, they are looked into. Needs to be set e.g. for
 `/Library/Frameworks`.
 
+XXX: NormalHeaderDir vs SystemHeaderDir
+
 See `tut03_pp.cpp`. This only adds system paths for now.
 
 Tutorial 04: Parsing the file
@@ -214,7 +216,23 @@ Also take care of `static`s and print the name of the defining file.
 Tutorial 08: Working with the AST
 ---
 
-Find long and nested functions.
+`StmtVisitor`, strangely recurring pattern
+
+traversion: iterators, visitors
+
+visitor only visits a single element (?)
+
+expr derived from stmt
+
+Find uses of all globals (in one file only?)
+
+
+ideas
+---
+
+track cross-file usages, nicer UI (jquery)
+
+> http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js
 
 
 Wrap up
@@ -222,6 +240,8 @@ Wrap up
 
 clang is somewhat modular: you can plug in a new parser as long as it conforms to
 the `Action` interface, several ast consumers can be used, etc.
+
+codegen uses a visitor
 
 
 questions

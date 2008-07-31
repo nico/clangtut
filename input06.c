@@ -33,6 +33,8 @@ int main()
   int a = 4;
 
   int b = a;
+
+  staticvar = 88;
 }
 
 /*int test() = main;*/  // illegal
