@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iterator>
 #include <vector>
+#include <map>
 using namespace std;
 
 #include "clang/Basic/Diagnostic.h"
@@ -95,40 +96,81 @@ static void DefineBuiltinMacro(std::vector<char> &Buf, const char *Macro,
   Buf.push_back('\n');
 }
 
+// XXX: use some llvm map?
+typedef map<VarDecl*, vector<DeclRefExpr*> > UsageMap;
+
 class FindUsages : public StmtVisitor<FindUsages> {
+  UsageMap& uses;
 public:
+  FindUsages(UsageMap& um) : uses(um) {}
+
   void VisitDeclRefExpr(DeclRefExpr* expr) {
-    cout << "Found declrefexpr" << endl;
+    if (VarDecl* vd = dyn_cast<VarDecl>(expr->getDecl())) {
+
+      UsageMap::iterator im = uses.find(vd);
+      if (im != uses.end()) {
+        im->second.push_back(expr);
+        cout << "Found use of global " << vd->getName() << endl;
+      }
+    }
+  }
+
+  void VisitStmt(Stmt* stmt) {
+    Stmt::child_iterator CI, CE = stmt->child_end();
+    for (CI = stmt->child_begin(); CI != CE; ++CI) {
+      Visit(*CI);
+    }
   }
 };
 
 
 class MyASTConsumer : public ASTConsumer {
   SourceManager *sm;
+  vector<FunctionDecl*> functions;
+  vector<VarDecl*> globals;
 public:
   virtual void Initialize(ASTContext &Context) {
     sm = &Context.getSourceManager();
   }
 
   virtual void HandleTopLevelDecl(Decl *D) {
-    // XXX: does not print c in `int b, c;`.
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
-        FullSourceLoc loc(D->getLocation(), *sm);
-        bool isStatic = VD->getStorageClass() == VarDecl::Static;
-
-        cout << loc.getSourceName() << ": "
-             << (isStatic?"static ":"") << VD->getName() << "\n";
+        // XXX: does not store c in `int b, c;`.
+        globals.push_back(VD);
+      }
+    } else if (FunctionDecl* FD = dyn_cast<FunctionDecl>(D)) {
+      if (FD->getBody() != 0) {
+        // XXX: This also collects functions from header files.
+        // This makes us slower than necesary, but doesn't change the results.
+        functions.push_back(FD);
       }
     }
+  }
 
-    else if (FunctionDecl* FD = dyn_cast<FunctionDecl>(D)) {
-      if (FD->getBody() != 0) {
-        cout << FD->getName() << ":";
-        FindUsages fu;
-        fu.Visit(FD->getBody());
-        cout << endl;
-      }
+  virtual void HandleTranslationUnit(TranslationUnit& tu) {
+    // called when everything is done
+
+    UsageMap uses;
+
+    for (int i = 0; i < globals.size(); ++i) {
+      VarDecl* VD = globals[i];
+      FullSourceLoc loc(VD->getLocation(), *sm);
+      bool isStatic = VD->getStorageClass() == VarDecl::Static;
+
+      cout << loc.getSourceName() << ": "
+           << (isStatic?"static ":"") << VD->getName() << "\n";
+
+      uses[VD] = vector<DeclRefExpr*>();
+    }
+
+    for (int i = 0; i < functions.size(); ++i) {
+      FunctionDecl* FD = functions[i];
+      //FullSourceLoc loc(FD->getLocation(), *sm);
+      cout << FD->getName() << ":";
+      FindUsages fu(uses);
+      fu.Visit(FD->getBody());
+      cout << endl;
     }
   }
 };

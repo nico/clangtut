@@ -213,6 +213,8 @@ Nice output ?
 
 Also take care of `static`s and print the name of the defining file.
 
+`TranslationUnit` contains a whole AST (i.e. all toplevel decls)
+
 Tutorial 08: Working with the AST
 ---
 
@@ -226,6 +228,10 @@ expr derived from stmt
 
 Find uses of all globals (in one file only?)
 
+Example in `StmtDumper`.
+
+XXX: Test with functions containing macros.
+
 
 ideas
 ---
@@ -233,6 +239,8 @@ ideas
 track cross-file usages, nicer UI (jquery)
 
 > http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js
+
+Some words about codegen and analysis
 
 
 Wrap up
@@ -249,5 +257,8 @@ questions
 
 * Why does `-ast-dump` only print the first var in a decl?
 * Why is `funcpointertype fp3` special?
+* libDriver: `DefineBuiltinMacro`, `DeclPrinter`, `TextDiagnosticClient`,
+             `addIncludePath`, pp construction (inter alia header search),
+             perhaps standard options (-D, -I, ?)
 
  vim:set tw=78:
