@@ -99,18 +99,21 @@ static void DefineBuiltinMacro(std::vector<char> &Buf, const char *Macro,
 // XXX: use some llvm map?
 typedef map<VarDecl*, vector<DeclRefExpr*> > UsageMap;
 
+// XXX: hack
+map<DeclRefExpr*, FunctionDecl*> enclosing;
+
 class FindUsages : public StmtVisitor<FindUsages> {
   UsageMap& uses;
+  FunctionDecl* fd;
 public:
   FindUsages(UsageMap& um) : uses(um) {}
 
   void VisitDeclRefExpr(DeclRefExpr* expr) {
     if (VarDecl* vd = dyn_cast<VarDecl>(expr->getDecl())) {
-
       UsageMap::iterator im = uses.find(vd);
       if (im != uses.end()) {
         im->second.push_back(expr);
-        cout << "Found use of global " << vd->getName() << endl;
+        enclosing[expr] = fd;
       }
     }
   }
@@ -120,6 +123,11 @@ public:
     for (CI = stmt->child_begin(); CI != CE; ++CI) {
       Visit(*CI);
     }
+  }
+
+  void process(FunctionDecl* fd) {
+    this->fd = fd;
+    Visit(fd->getBody());
   }
 };
 
@@ -152,6 +160,14 @@ public:
     // called when everything is done
 
     UsageMap uses;
+    for (int i = 0; i < globals.size(); ++i) {
+      uses[globals[i]] = vector<DeclRefExpr*>();
+    }
+
+    FindUsages fu(uses);
+    for (int i = 0; i < functions.size(); ++i) {
+      fu.process(functions[i]);
+    }
 
     for (int i = 0; i < globals.size(); ++i) {
       VarDecl* VD = globals[i];
@@ -161,16 +177,10 @@ public:
       cout << loc.getSourceName() << ": "
            << (isStatic?"static ":"") << VD->getName() << "\n";
 
-      uses[VD] = vector<DeclRefExpr*>();
-    }
-
-    for (int i = 0; i < functions.size(); ++i) {
-      FunctionDecl* FD = functions[i];
-      //FullSourceLoc loc(FD->getLocation(), *sm);
-      cout << FD->getName() << ":";
-      FindUsages fu(uses);
-      fu.Visit(FD->getBody());
-      cout << endl;
+      for (int j = 0; j < uses[VD].size(); ++j) {
+        DeclRefExpr* dre = uses[VD][j];
+        cout << "  " << enclosing[dre]->getName() << "\n";
+      }
     }
   }
 };
