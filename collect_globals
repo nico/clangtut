@@ -1,13 +1,14 @@
 #!/bin/bash
 
 cat > globals.html << 'EOF'
+<!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Global variables</title>
   
 <style type="text/css">
-/* without the explicit `span`, this does not work in Ff3 (but in Safari) */
-span.global:hover {
+.global:hover {
   text-decoration: underline;
   color: blue;
   cursor: pointer;
