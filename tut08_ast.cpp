@@ -300,7 +300,7 @@ int main(int argc, char* argv[])
   ASTConsumer* c = new MyASTConsumer;
   ParseAST(pp, c);  // deletes c
 
-  cout << "</pre></code>" << endl << endl;
+  cout << "</code></pre>" << endl << endl;
 
   delete target;
 
