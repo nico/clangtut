@@ -176,9 +176,12 @@ public:
       FullSourceLoc loc(VD->getLocation(), *sm);
       bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
-      cout << loc.getSourceName() << ": "
-           << (isStatic?"static ":"") << VD->getName() << "\n";
+      cout << "<span class=\"global\">" << loc.getSourceName() << ": "
+           << (isStatic?"static ":"") << VD->getName()
+           << "  (" << uses[VD].size() << " local uses)"
+           << "\n</span>";
 
+      cout << "<span class=\"uses\">";
       for (int j = 0; j < uses[VD].size(); ++j) {
         DeclRefExpr* dre = uses[VD][j];
         FunctionDecl* fd = enclosing[dre];
@@ -186,6 +189,7 @@ public:
         cout << "  " << fd->getName() << ":"
              << loc.getLogicalLineNumber() << "\n";
       }
+      cout << "</span>";
     }
   }
 };

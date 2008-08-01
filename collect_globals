@@ -1,0 +1,31 @@
+#!/bin/bash
+
+cat > globals.html << 'EOF'
+<html>
+<head>
+<title>Global variables</title>
+  
+<style type="text/css">
+</style>
+
+<script type="text/javascript"
+  src="http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js">
+</script>
+<script type="text/javascript">
+$(document).ready(function() {
+  $('.uses').hide();
+  $('.global').click(function() {
+    $(this).next().slideToggle();
+  });
+});
+</script>
+</head>
+<body>
+EOF
+
+make CC=../../../clangtut/tut08 | tee -a globals.html
+
+cat >> globals.html << EOF
+</body>
+</html>
+EOF

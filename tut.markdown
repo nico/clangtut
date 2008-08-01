@@ -181,6 +181,9 @@ will have the following `DeclaratorChunk`s:
 
 Need to change include dir type to ignore stuff from system headers.
 
+Note that this does not find `static`s local to functions (which are globals,
+too).
+
 Tutorial 06: Doing semantic analysis with clang
 ---
 

@@ -17,6 +17,10 @@ static int staticvar = 88;
 int a;
 int a = 3;
 
+struct Test {
+  int a, b;
+} test;
+
 int anothervar;
 
 int b = 4, c = 5;
@@ -38,6 +42,8 @@ int main()
   int a = 4;
 
   int b = a;
+
+  test.b = 80;
 
   staticvar = 88;
 
