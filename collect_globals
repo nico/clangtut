@@ -6,6 +6,12 @@ cat > globals.html << 'EOF'
 <title>Global variables</title>
   
 <style type="text/css">
+/* without the explicit `span`, this does not work in Ff3 (but in Safari) */
+span.global:hover {
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
+}
 </style>
 
 <script type="text/javascript"
