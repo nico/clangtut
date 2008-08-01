@@ -45,8 +45,8 @@ public:
       break;
     }
 
-    //cerr << Pos.getLineNumber() << ' ';
-    cerr << Pos.getLogicalLineNumber() << ' ';
+    cerr << (Pos.isFileID() ? Pos.getSourceName() : "")
+         << ":" << Pos.getLogicalLineNumber() << ' ';
     cerr << Diags.getDescription(ID) << endl;
     for (int i = 0; i < NumStrs; ++i) {
       cerr << "\t%" << i << ": " << Strs[i] << endl;
@@ -121,7 +121,9 @@ public:
   void VisitStmt(Stmt* stmt) {
     Stmt::child_iterator CI, CE = stmt->child_end();
     for (CI = stmt->child_begin(); CI != CE; ++CI) {
-      Visit(*CI);
+      if (*CI != 0) {
+        Visit(*CI);
+      }
     }
   }
 
@@ -179,7 +181,10 @@ public:
 
       for (int j = 0; j < uses[VD].size(); ++j) {
         DeclRefExpr* dre = uses[VD][j];
-        cout << "  " << enclosing[dre]->getName() << "\n";
+        FunctionDecl* fd = enclosing[dre];
+        FullSourceLoc loc(dre->getLocStart(), *sm);
+        cout << "  " << fd->getName() << ":"
+             << loc.getLogicalLineNumber() << "\n";
       }
     }
   }

@@ -9,10 +9,15 @@ int test = 8;
 int test2 = 12;
 #endif
 
+#define DOIT staticvar = 199; \
+             anothervar = 89898
+
 static int staticvar = 88;
 
 int a;
 int a = 3;
+
+int anothervar;
 
 int b = 4, c = 5;
 
@@ -35,6 +40,8 @@ int main()
   int b = a;
 
   staticvar = 88;
+
+  DOIT;
 }
 
 /*int test() = main;*/  // illegal

@@ -222,7 +222,9 @@ Tutorial 08: Working with the AST
 
 traversion: iterators, visitors
 
-visitor only visits a single element (?)
+visitor only visits a single element (?) -- need to recurse manually.
+Careful: the child iterator can return NULL (e.g. `if` without else branch
+will have NULL for the else branch).
 
 expr derived from stmt
 
@@ -231,6 +233,11 @@ Find uses of all globals (in one file only?)
 Example in `StmtDumper`.
 
 XXX: Test with functions containing macros.
+
+only prints uses in functions, that omits some uses (e.g. as initializers of
+other globals)
+
+LogicalLineNumber works with macro expansion, LineNumber does not.
 
 
 ideas
