@@ -242,6 +242,21 @@ other globals)
 
 LogicalLineNumber works with macro expansion, LineNumber does not.
 
+To identify globals over several translation units: Combination
+filename/global name should be unique (global name alone is unique for
+non-static vars). If static vars in functions should be handled, function name
+becomes important, too.
+
+Do it like a compiler: For each file, output an .o file, and build the
+complete file during "link time". The .o file could be
+
+* A copy of the input file
+* A serialized AST of the input file
+* A serialized form of the extracted data
+
+Second options seems to hit the sweet spot: Shows some more clang, keeps
+parsing paralellizable, but keeps .o files general.
+
 
 ideas
 ---
