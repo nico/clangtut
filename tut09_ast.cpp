@@ -20,42 +20,39 @@ using namespace std;
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TranslationUnit.h"
 
+#include "llvm/System/Path.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/System/Signals.h"
+
+#include "clang/Driver/TextDiagnosticPrinter.h"
+
+#include "llvm/Config/config.h"
 
 using namespace clang;
 
-class DummyDiagnosticClient : public DiagnosticClient {
+
+#include "PreprocessorContext.h"
+
+// serializer {{{
+class Serializer : public ASTConsumer {
+  TranslationUnit* TU;
+  const llvm::sys::Path FName;
 public:
-  virtual void HandleDiagnostic(Diagnostic &Diags, 
-                                Diagnostic::Level DiagLevel,
-                                FullSourceLoc Pos,
-                                diag::kind ID,
-                                const std::string *Strs,
-                                unsigned NumStrs,
-                                const SourceRange *Ranges, 
-                                unsigned NumRanges) {
+  Serializer(const llvm::sys::Path& F) : TU(0), FName(F) {}    
+  
+  ~Serializer() {
+    EmitASTBitcodeFile(TU, FName);
+  }
 
-    switch (DiagLevel) {
-    default: assert(0 && "Unknown diagnostic type!");
-    case Diagnostic::Note:    return; cerr << "note: "; break;
-    case Diagnostic::Warning: return; cerr << "warning: "; break;
-    case Diagnostic::Error:   cerr << "error: "; break;
-    case Diagnostic::Fatal:   cerr << "fatal error: "; break;
-      break;
-    }
-
-    cerr << (Pos.isFileID() ? Pos.getSourceName() : "")
-         << ":" << Pos.getLogicalLineNumber() << ' ';
-    cerr << Diags.getDescription(ID) << endl;
-    for (int i = 0; i < NumStrs; ++i) {
-      cerr << "\t%" << i << ": " << Strs[i] << endl;
-    }
-    cerr << endl;
+  virtual void InitializeTU(TranslationUnit &tu) {
+    TU = &tu;
   }
 };
+// }}}
 
-
+// include and define funcs {{{
 void addIncludePath(vector<DirectoryLookup>& paths,
     const string& path,
     DirectoryLookup::DirType type,
@@ -95,6 +92,7 @@ static void DefineBuiltinMacro(std::vector<char> &Buf, const char *Macro,
   }
   Buf.push_back('\n');
 }
+// }}}
 
 // XXX: use some llvm map?
 typedef map<VarDecl*, vector<DeclRefExpr*> > UsageMap;
@@ -137,17 +135,21 @@ public:
 class MyASTConsumer : public ASTConsumer {
   SourceManager *sm;
   vector<FunctionDecl*> functions;
-  vector<VarDecl*> globals;
+  vector<pair<VarDecl*, bool> > globals;
+  ostream& out;
 public:
+  MyASTConsumer(ostream& o) : out(o) {}
+
   virtual void Initialize(ASTContext &Context) {
     sm = &Context.getSourceManager();
   }
 
   virtual void HandleTopLevelDecl(Decl *D) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
+      if (VD->isFileVarDecl()) {
         // XXX: does not store c in `int b, c;`.
-        globals.push_back(VD);
+        globals.push_back(make_pair(VD,
+              VD->getStorageClass() != VarDecl::Extern));
       }
     } else if (FunctionDecl* FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getBody() != 0) {
@@ -163,7 +165,7 @@ public:
 
     UsageMap uses;
     for (int i = 0; i < globals.size(); ++i) {
-      uses[globals[i]] = vector<DeclRefExpr*>();
+      uses[globals[i].first] = vector<DeclRefExpr*>();
     }
 
     FindUsages fu(uses);
@@ -171,26 +173,42 @@ public:
       fu.process(functions[i]);
     }
 
+    vector<DeclRefExpr*> allUses;
+    out << globals.size() << " defines\n";
     for (int i = 0; i < globals.size(); ++i) {
-      VarDecl* VD = globals[i];
+      if (!globals[i].second) continue;
+
+      VarDecl* VD = globals[i].first;
       FullSourceLoc loc(VD->getLocation(), *sm);
       bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
-      cout << "<span class=\"global\">" << loc.getSourceName() << ": "
-           << (isStatic?"static ":"") << VD->getName()
-           << "  (" << uses[VD].size() << " local uses)"
-           << "\n</span>";
+      out
+          //<< "<span class=\"global\">"
+          << loc.getSourceName() << ":" << loc.getLogicalLineNumber() << " "
+          << (isStatic?"static ":"") << VD->getName()
+          //<< "  (" << uses[VD].size() << " local uses)"
+          << "\n"
+          //<< "</span>"
+          ;
 
-      cout << "<span class=\"uses\">";
-      for (int j = 0; j < uses[VD].size(); ++j) {
-        DeclRefExpr* dre = uses[VD][j];
-        FunctionDecl* fd = enclosing[dre];
-        FullSourceLoc loc(dre->getLocStart(), *sm);
-        cout << "  " << fd->getName() << ":"
-             << loc.getLogicalLineNumber() << "\n";
-      }
-      cout << "</span>";
+      //allUses.append(uses[VD].begin(), uses[VD].end());
+      allUses.insert(allUses.end(), uses[VD].begin(), uses[VD].end());
     }
+
+    out << allUses.size() << " uses\n";
+    //out << "<span class=\"uses\">";
+    for (int j = 0; j < allUses.size(); ++j) {
+      DeclRefExpr* dre = allUses[j];
+      FunctionDecl* fd = enclosing[dre];
+      FullSourceLoc loc(dre->getLocStart(), *sm);
+      out
+          //<< "  "
+          << fd->getName() << ":"
+          << loc.getLogicalLineNumber()
+          << " " << dre->getDecl()->getName()
+          << "\n";
+    }
+    //out << "</span>";
   }
 };
 
@@ -206,79 +224,66 @@ static llvm::cl::opt<string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"),
     llvm::cl::Required);
 
+//static llvm::cl::opt<llvm::sys::Path>
+static llvm::cl::opt<string>
+OutputFilename("o", llvm::cl::value_desc("outfile"),
+    llvm::cl::desc("Name of output file"), llvm::cl::Required);
+
 static llvm::cl::list<std::string> IgnoredParams(llvm::cl::Sink);
-static llvm::cl::opt<string> dummy("o", llvm::cl::desc("dummy for gcc compat"));
-
-struct PPContext {
-  PPContext()
-    : diags(diagClient),
-      target(TargetInfo::CreateTargetInfo("i386-apple-darwin")),
-      headers(fm),
-      pp(diags, opts, *target, sm, headers)
-  {}
-
-  ~PPContext()
-  { delete target; }
-
-  void addIncludesAndDefines() {
-    // Add header search directories (C only, no C++ or ObjC)
-
-    vector<DirectoryLookup> dirs;
-
-    // user headers
-    for (int i = 0; i < I_dirs.size(); ++i) {
-      cerr << "adding " << I_dirs[i] << endl;
-      addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, fm);
-    }
-
-    // This specifies where in `dirs` the system headers start. Quoted includes
-    // are searched for in all paths, angled includes only in the system headers.
-    // -I can point to the direction of e.g. Carbon.h, which is usually included
-    // in angle brackets. So we add everything to the system headers.
-    unsigned systemDirIdx = 0;
-
-    // system headers
-    addIncludePath(dirs, "/usr/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/usr/local/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/Library/Frameworks",
-        DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
-    addIncludePath(dirs, "/System/Library/Frameworks",
-        DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
-
-    bool noCurDirSearch = true;  // do not search in the current directory
-    headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
 
 
-    // Add defines passed in through parameters
-    vector<char> predefineBuffer;
-    for (int i = 0; i < D_macros.size(); ++i) {
-      cerr << "defining " << D_macros[i] << endl;
-      DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
-    }
-    predefineBuffer.push_back('\0');
-    pp.setPredefines(&predefineBuffer[0]);
+void addIncludesAndDefines(PPContext& c) {/*{{{*/
+  // Add header search directories (C only, no C++ or ObjC)
+
+  vector<DirectoryLookup> dirs;
+
+  // user headers
+  for (int i = 0; i < I_dirs.size(); ++i) {
+    cerr << "adding " << I_dirs[i] << endl;
+    addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, c.fm);
   }
 
-  DummyDiagnosticClient diagClient;
-  Diagnostic diags;
-  LangOptions opts;
-  TargetInfo* target;
-  SourceManager sm;
-  FileManager fm;
-  HeaderSearch headers;
-  Preprocessor pp;
-};
+  // include paths {{{
+  // This specifies where in `dirs` the system headers start. Quoted includes
+  // are searched for in all paths, angled includes only in the system headers.
+  // -I can point to the direction of e.g. Carbon.h, which is usually included
+  // in angle brackets. So we add everything to the system headers.
+  unsigned systemDirIdx = 0;
+
+  // system headers
+  addIncludePath(dirs, "/usr/include",
+      DirectoryLookup::SystemHeaderDir, c.fm);
+  addIncludePath(dirs, "/usr/local/include",
+      DirectoryLookup::SystemHeaderDir, c.fm);
+  addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
+      DirectoryLookup::SystemHeaderDir, c.fm);
+  addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
+      DirectoryLookup::SystemHeaderDir, c.fm);
+  addIncludePath(dirs, "/Library/Frameworks",
+      DirectoryLookup::SystemHeaderDir, c.fm, /*isFramework=*/true);
+  addIncludePath(dirs, "/System/Library/Frameworks",
+      DirectoryLookup::SystemHeaderDir, c.fm, /*isFramework=*/true);
+  // }}}
+
+  bool noCurDirSearch = true;  // do not search in the current directory
+  c.headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
+
+
+  // Add defines passed in through parameters
+  vector<char> predefineBuffer;
+  for (int i = 0; i < D_macros.size(); ++i) {
+    cerr << "defining " << D_macros[i] << endl;
+    DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
+  }
+  predefineBuffer.push_back('\0');
+  c.pp.setPredefines(&predefineBuffer[0]);
+}/*}}}*/
 
 int main(int argc, char* argv[])
 {
   llvm::cl::ParseCommandLineOptions(argc, argv, " globalcollect\n"
       "  This collects and prints global variables found in C programs.");
+  llvm::sys::PrintStackTraceOnErrorSignal();
 
   if (!IgnoredParams.empty()) {
     cerr << "Ignoring the following parameters:";
@@ -286,9 +291,15 @@ int main(int argc, char* argv[])
         ostream_iterator<string>(cerr, " "));
   }
 
+  llvm::sys::Path OutputPath(OutputFilename);
+  if (OutputPath.getSuffix() !=  "o") {
+    cerr << "Linking not yet implemented" << endl;
+    return 1;
+  }
+
   // Create Preprocessor object
   PPContext context;
-  context.addIncludesAndDefines();
+  addIncludesAndDefines(context);
 
 
   // Add input file
@@ -300,16 +311,24 @@ int main(int argc, char* argv[])
   }
   context.sm.createMainFileID(File, SourceLocation());
 
+  // Serialize it
+  //ASTConsumer* c = new Serializer(OutputPath);
+  //ParseAST(context.pp, c);  // deletes c
 
-  // Parse it
 
-  cout << "<h2><code>" << InputFilename << "</code></h2>" << endl << endl;
-  cout << "<pre><code>";
+  //// Parse it
 
-  ASTConsumer* c = new MyASTConsumer;
+  cout
+       //<< "<h2><code>"
+       << InputFilename
+       //<< "</code></h2>" << endl
+       << endl;
+  //cout << "<pre><code>";
+
+  ASTConsumer* c = new MyASTConsumer(cout);
   ParseAST(context.pp, c);  // deletes c
 
-  cout << "</code></pre>" << endl << endl;
+  //cout << "</code></pre>" << endl << endl;
 
   cout << endl;
 

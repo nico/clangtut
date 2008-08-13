@@ -19,6 +19,8 @@ Prereq
 
 Checking out, building (graphviz support!), 
 
+add /Applications/Graphviz.app/Contents/MacOS/ to path, config llvm
+
 Tutorial 01: The bare minimum
 ---
 
@@ -242,6 +244,9 @@ other globals)
 
 LogicalLineNumber works with macro expansion, LineNumber does not.
 
+Tutorial 09: Tracking globals across files
+---
+
 To identify globals over several translation units: Combination
 filename/global name should be unique (global name alone is unique for
 non-static vars). If static vars in functions should be handled, function name
@@ -254,16 +259,48 @@ complete file during "link time". The .o file could be
 * A serialized AST of the input file
 * A serialized form of the extracted data
 
+Problem with 1.: Need to remember compile flags, paths, etc
+
+Problem with 3.: Likely need manual (de)serializing code, not really flexible
+
 Second options seems to hit the sweet spot: Shows some more clang, keeps
 parsing paralellizable, but keeps .o files general.
+
+Sadly, serializing is still incomplete, so we can't do that. So, go with 3 for
+now. We need to serialize for each file:
+
+* (List of declared globals)
+* List of defined globals (with information if they are static to that file)
+* List of global uses, perhaps along with a few lines of context
+
+The linker then can for each global list all uses.
+
+Interlude: `DiagnosticClient`. In practice needs a `HeaderSearch` object to
+implement `isInSystemHeader()`. However, many clients really only need
+`hasErrorOccurred()` on `Diagnostics`, so making the HS mandatory for the
+client (which is mandatory for D) causes grief for clients. But a
+`TextDiagnosticClient` without HS is dangerous. Best fix: make HS mandatory
+for DC, but DC not for D?
+
+Furthermore, `HTMLDiagnositcs` shows warnings in system headers, TextDiag
+doesn't.
+
+Better: Fold TextDiagnostics into DiagnosticClient, base stuff on that. Make
+HS mandatory for DC, etc. Problem: HS is in Lex, DC in Basic. Moving HS
+requires moving DirectoryLookup.
+
+Ted doesn't like this: Some DiagClients don't care about headers (if ast comes
+from deserializing, e.g.). So isInSystemHeader() really shouldn't be in
+DiagClient if it's only useful during lexing/pp/sema. Add method
+`DiagFromFile` to `Diagnostics` and let it check for sys-header-dom? If this
+should be disablable, add flag to `Diagnostics` (so DiagClient becomes purely
+presentational).
+
+Good: Clients do not have to take care of this
 
 
 ideas
 ---
-
-track cross-file usages, nicer UI (jquery)
-
-> http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js
 
 Some words about codegen and analysis
 
@@ -282,7 +319,7 @@ questions
 
 * Why does `-ast-dump` only print the first var in a decl?
 * Why is `funcpointertype fp3` special?
-* libDriver: `DefineBuiltinMacro`, `DeclPrinter`, `TextDiagnosticClient`,
+* libDriver: `DefineBuiltinMacro`, `DeclPrinter`,
              `addIncludePath`, pp construction (inter alia header search),
              perhaps standard options (-D, -I, ?)
 
