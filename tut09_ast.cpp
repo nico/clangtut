@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include <iterator>
 #include <vector>
 #include <map>
@@ -176,9 +177,12 @@ public:
     vector<DeclRefExpr*> allUses;
     out << globals.size() << " defines\n";
     for (int i = 0; i < globals.size(); ++i) {
+      VarDecl* VD = globals[i].first;
+
+      //allUses.append(uses[VD].begin(), uses[VD].end());
+      allUses.insert(allUses.end(), uses[VD].begin(), uses[VD].end());
       if (!globals[i].second) continue;
 
-      VarDecl* VD = globals[i].first;
       FullSourceLoc loc(VD->getLocation(), *sm);
       bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
@@ -190,9 +194,6 @@ public:
           << "\n"
           //<< "</span>"
           ;
-
-      //allUses.append(uses[VD].begin(), uses[VD].end());
-      allUses.insert(allUses.end(), uses[VD].begin(), uses[VD].end());
     }
 
     out << allUses.size() << " uses\n";
@@ -316,21 +317,30 @@ int main(int argc, char* argv[])
   //ParseAST(context.pp, c);  // deletes c
 
 
+  ofstream out(OutputFilename.c_str());
+  if (!out) {
+    cerr << "Failed to open \'" << OutputFilename << "\'" << endl;
+    return EXIT_FAILURE;
+  }
+  //ostream& out = cout;
+
   //// Parse it
 
-  cout
-       //<< "<h2><code>"
-       << InputFilename
-       //<< "</code></h2>" << endl
-       << endl;
-  //cout << "<pre><code>";
+  out
+      //<< "<h2><code>"
+      << InputFilename
+      //<< "</code></h2>" << endl
+      << endl;
+  //out << "<pre><code>";
 
-  ASTConsumer* c = new MyASTConsumer(cout);
-  ParseAST(context.pp, c);  // deletes c
+  ASTConsumer* c = new MyASTConsumer(out);
+  ParseAST(context.pp, c);
+  delete c;
 
-  //cout << "</code></pre>" << endl << endl;
+  //out << "</code></pre>" << endl << endl;
 
-  cout << endl;
+  out << endl;
+  out.close();
 
   unsigned NumDiagnostics = context.diags.getNumDiagnostics();
   
