@@ -6,25 +6,13 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 
+#include "clang/Driver/TextDiagnosticPrinter.h"
+
 using namespace clang;
-
-class DummyDiagnosticClient : public DiagnosticClient {
-public:
-  virtual void HandleDiagnostic(Diagnostic &Diags, 
-                                Diagnostic::Level DiagLevel,
-                                FullSourceLoc Pos,
-                                diag::kind ID,
-                                const std::string *Strs,
-                                unsigned NumStrs,
-                                const SourceRange *Ranges, 
-                                unsigned NumRanges) {
-  }
-};
-
 
 int main()
 {
-  DummyDiagnosticClient diagClient;
+  TextDiagnosticPrinter diagClient;
   Diagnostic diags(diagClient);
 
   LangOptions opts;
