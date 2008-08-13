@@ -23,37 +23,9 @@ using namespace std;
 
 #include "llvm/Support/CommandLine.h"
 
+#include "clang/Driver/TextDiagnosticPrinter.h"
+
 using namespace clang;
-
-class DummyDiagnosticClient : public DiagnosticClient {
-public:
-  virtual void HandleDiagnostic(Diagnostic &Diags, 
-                                Diagnostic::Level DiagLevel,
-                                FullSourceLoc Pos,
-                                diag::kind ID,
-                                const std::string *Strs,
-                                unsigned NumStrs,
-                                const SourceRange *Ranges, 
-                                unsigned NumRanges) {
-
-    switch (DiagLevel) {
-    default: assert(0 && "Unknown diagnostic type!");
-    case Diagnostic::Note:    return; cerr << "note: "; break;
-    case Diagnostic::Warning: return; cerr << "warning: "; break;
-    case Diagnostic::Error:   cerr << "error: "; break;
-    case Diagnostic::Fatal:   cerr << "fatal error: "; break;
-      break;
-    }
-
-    cerr << (Pos.isFileID() ? Pos.getSourceName() : "")
-         << ":" << Pos.getLogicalLineNumber() << ' ';
-    cerr << Diags.getDescription(ID) << endl;
-    for (int i = 0; i < NumStrs; ++i) {
-      cerr << "\t%" << i << ": " << Strs[i] << endl;
-    }
-    cerr << endl;
-  }
-};
 
 
 void addIncludePath(vector<DirectoryLookup>& paths,
@@ -265,7 +237,7 @@ struct PPContext {
     pp.setPredefines(&predefineBuffer[0]);
   }
 
-  DummyDiagnosticClient diagClient;
+  TextDiagnosticPrinter diagClient;
   Diagnostic diags;
   LangOptions opts;
   TargetInfo* target;
