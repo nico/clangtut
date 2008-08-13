@@ -221,8 +221,8 @@ static llvm::cl::list<std::string>
 I_dirs("I", llvm::cl::value_desc("directory"), llvm::cl::Prefix,
     llvm::cl::desc("Add directory to include search path"));
 
-static llvm::cl::opt<string>
-InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"),
+static llvm::cl::list<string>
+InputFilenames(llvm::cl::Positional, llvm::cl::desc("<input file>"),
     llvm::cl::Required);
 
 //static llvm::cl::opt<llvm::sys::Path>
@@ -280,6 +280,59 @@ void addIncludesAndDefines(PPContext& c) {/*{{{*/
   c.pp.setPredefines(&predefineBuffer[0]);
 }/*}}}*/
 
+bool compile(ostream& out, const string& inFile)
+{
+  // Create Preprocessor object
+  PPContext context;
+  addIncludesAndDefines(context);
+
+
+  // Add input file
+
+  const FileEntry* File = context.fm.getFile(inFile);
+  if (!File) {
+    cerr << "Failed to open \'" << inFile << "\'" << endl;
+    return false;
+  }
+  context.sm.createMainFileID(File, SourceLocation());
+
+  // Serialize it
+  //ASTConsumer* c = new Serializer(OutputPath);
+  //ParseAST(context.pp, c);  // deletes c
+
+
+  if (!out) {
+    cerr << "Failed to open \'" << OutputFilename << "\'" << endl;
+    return false;
+  }
+  //ostream& out = cout;
+
+  //// Parse it
+
+  out
+      //<< "<h2><code>"
+      << InputFilenames[0]
+      //<< "</code></h2>" << endl
+      << endl;
+  //out << "<pre><code>";
+
+  ASTConsumer* c = new MyASTConsumer(out);
+  ParseAST(context.pp, c);
+  delete c;
+
+  //out << "</code></pre>" << endl << endl;
+
+  out << endl;
+
+  unsigned NumDiagnostics = context.diags.getNumDiagnostics();
+  
+  if (NumDiagnostics)
+    fprintf(stderr, "%d diagnostic%s generated.\n", NumDiagnostics,
+            (NumDiagnostics == 1 ? "" : "s"));
+
+  return true;
+}
+
 int main(int argc, char* argv[])
 {
   llvm::cl::ParseCommandLineOptions(argc, argv, " globalcollect\n"
@@ -292,59 +345,23 @@ int main(int argc, char* argv[])
         ostream_iterator<string>(cerr, " "));
   }
 
+  enum { COMPILE, LINK } mode = COMPILE;
+
+  if (InputFilenames.size() > 1)
+    mode = LINK;
+
   llvm::sys::Path OutputPath(OutputFilename);
-  if (OutputPath.getSuffix() !=  "o") {
-    cerr << "Linking not yet implemented" << endl;
+  if (OutputPath.getSuffix() !=  "o" && mode == COMPILE) {
+    cerr << "Need to compile to a .o file" << endl;
     return 1;
   }
 
-  // Create Preprocessor object
-  PPContext context;
-  addIncludesAndDefines(context);
-
-
-  // Add input file
-
-  const FileEntry* File = context.fm.getFile(InputFilename);
-  if (!File) {
-    cerr << "Failed to open \'" << InputFilename << "\'" << endl;
-    return EXIT_FAILURE;
+  if (mode == COMPILE) {
+    ofstream out(OutputFilename.c_str());
+    compile(out, InputFilenames[0]);
+    out.close();
+  } else {
+    cerr << "Linking not yet implemented" << endl;
+    return 1;
   }
-  context.sm.createMainFileID(File, SourceLocation());
-
-  // Serialize it
-  //ASTConsumer* c = new Serializer(OutputPath);
-  //ParseAST(context.pp, c);  // deletes c
-
-
-  ofstream out(OutputFilename.c_str());
-  if (!out) {
-    cerr << "Failed to open \'" << OutputFilename << "\'" << endl;
-    return EXIT_FAILURE;
-  }
-  //ostream& out = cout;
-
-  //// Parse it
-
-  out
-      //<< "<h2><code>"
-      << InputFilename
-      //<< "</code></h2>" << endl
-      << endl;
-  //out << "<pre><code>";
-
-  ASTConsumer* c = new MyASTConsumer(out);
-  ParseAST(context.pp, c);
-  delete c;
-
-  //out << "</code></pre>" << endl << endl;
-
-  out << endl;
-  out.close();
-
-  unsigned NumDiagnostics = context.diags.getNumDiagnostics();
-  
-  if (NumDiagnostics)
-    fprintf(stderr, "%d diagnostic%s generated.\n", NumDiagnostics,
-            (NumDiagnostics == 1 ? "" : "s"));
 }
