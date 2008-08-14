@@ -174,15 +174,23 @@ public:
       fu.process(functions[i]);
     }
 
+    int count = 0;
     vector<DeclRefExpr*> allUses;
-    out << globals.size() << " defines\n";
     for (int i = 0; i < globals.size(); ++i) {
       VarDecl* VD = globals[i].first;
 
       //allUses.append(uses[VD].begin(), uses[VD].end());
       allUses.insert(allUses.end(), uses[VD].begin(), uses[VD].end());
+
+      if (globals[i].second)
+        ++count;
+    }
+
+    out << count << " defines\n";
+    for (int i = 0; i < globals.size(); ++i) {
       if (!globals[i].second) continue;
 
+      VarDecl* VD = globals[i].first;
       FullSourceLoc loc(VD->getLocation(), *sm);
       bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
@@ -266,7 +274,7 @@ void addIncludesAndDefines(PPContext& c) {/*{{{*/
       DirectoryLookup::SystemHeaderDir, c.fm, /*isFramework=*/true);
   // }}}
 
-  bool noCurDirSearch = true;  // do not search in the current directory
+  bool noCurDirSearch = false;  // search in the current directory
   c.headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
 
 
@@ -333,6 +341,92 @@ bool compile(ostream& out, const string& inFile)
   return true;
 }
 
+void parseNameColonNumber(istream& in, string& nameOut, int& numOut)
+{
+  string dummy; in >> dummy;
+  string::size_type p = dummy.find(":");
+  nameOut = dummy.substr(0, p);
+  numOut = atoi(dummy.substr(p + 1).c_str());
+}
+
+struct Define {
+  string definingTU;
+  string definingFile;
+  int definingLine;
+  bool isStatic;
+  string name;
+};
+
+struct Use {
+  string usingTU;
+  string usingFunction;
+  int usingLine;
+  string name;
+  Define* var;
+};
+
+bool link(const vector<string>& files)
+{
+  vector<Define> allDefines;
+  vector<Use> allUses;
+  for (int i = 0; i < files.size(); ++i) {
+    ifstream in(files[i].c_str());
+    if (!in) {
+      cerr << "Failed to open \'" << files[i] << "\"\n";
+      return false;
+    }
+
+    string inName, dummy;
+    in >> inName;
+
+    int numDefines; in >> numDefines >> dummy; in.get();
+    for (int j = 0; j < numDefines; ++j) {
+      Define d;
+      d.definingTU = inName;
+      parseNameColonNumber(in, d.definingFile, d.definingLine);
+      in >> dummy;
+      d.isStatic = dummy == "static";
+      if (d.isStatic)
+        in >> dummy;
+      d.name = dummy;
+      allDefines.push_back(d);
+    }
+
+    int numUses; in >> numUses >> dummy; in.get();
+    for (int j = 0; j < numUses; ++j) {
+      Use u;
+      u.usingTU = inName;
+      parseNameColonNumber(in, u.usingFunction, u.usingLine);
+      in >> u.name;
+      allUses.push_back(u);
+    }
+  }
+
+  map<pair<string, string>, Define*> defineMap;
+  for (int i = 0; i < allDefines.size(); ++i) {
+    Define& d = allDefines[i];
+    assert(defineMap.find(make_pair(d.definingTU, d.name)) == defineMap.end());
+    defineMap[make_pair(d.definingTU, d.name)] = &d;
+  }
+
+  for (int i = 0; i < allUses.size(); ++i) {
+    Use& u = allUses[i];
+    if (defineMap.find(make_pair(u.usingTU, u.name)) == defineMap.end()) {
+      cout << "Unresolved global \"" << u.name << "\"\n";
+      exit(1);
+    }
+    u.var = defineMap[make_pair(u.usingTU, u.name)];
+  }
+
+  for (int i = 0; i < allUses.size(); ++i) {
+    Use& u = allUses[i];
+    cout << u.name << ":: "
+         << u.usingFunction << ":" << u.usingLine
+         << " -> " << u.var->definingFile << ":" << u.var->definingLine
+         << endl;
+  }
+}
+
 int main(int argc, char* argv[])
 {
   llvm::cl::ParseCommandLineOptions(argc, argv, " globalcollect\n"
@@ -347,10 +441,10 @@ int main(int argc, char* argv[])
 
   enum { COMPILE, LINK } mode = COMPILE;
 
-  if (InputFilenames.size() > 1)
+  llvm::sys::Path OutputPath(OutputFilename);
+  if (InputFilenames.size() > 1 || OutputPath.getSuffix() != "o")
     mode = LINK;
 
-  llvm::sys::Path OutputPath(OutputFilename);
   if (OutputPath.getSuffix() !=  "o" && mode == COMPILE) {
     cerr << "Need to compile to a .o file" << endl;
     return 1;
@@ -361,7 +455,6 @@ int main(int argc, char* argv[])
     compile(out, InputFilenames[0]);
     out.close();
   } else {
-    cerr << "Linking not yet implemented" << endl;
-    return 1;
+    link(InputFilenames);
   }
 }
