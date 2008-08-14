@@ -238,6 +238,9 @@ static llvm::cl::opt<string>
 OutputFilename("o", llvm::cl::value_desc("outfile"),
     llvm::cl::desc("Name of output file"), llvm::cl::Required);
 
+static llvm::cl::list<string>
+FrameworkDummy("framework", llvm::cl::desc("compat dummy"));
+
 static llvm::cl::list<std::string> IgnoredParams(llvm::cl::Sink);
 
 
@@ -292,6 +295,10 @@ bool compile(ostream& out, const string& inFile)
 {
   // Create Preprocessor object
   PPContext context;
+
+  // XXX: move warning initialization to libDriver
+  context.diags.setDiagnosticMapping(
+      diag::warn_pp_undef_identifier,diag::MAP_IGNORE);
   addIncludesAndDefines(context);
 
 
@@ -365,7 +372,7 @@ struct Use {
   Define* var;
 };
 
-bool link(const vector<string>& files)
+bool link(ostream& out, const vector<string>& files)
 {
   vector<Define> allDefines;
   vector<Use> allUses;
@@ -408,8 +415,10 @@ bool link(const vector<string>& files)
     pair<string, string> key("", d.name);
     if (d.isStatic)
       key.first = d.definingTU;
-    //cout << key.first << " " << key.second << endl;
-    assert(defineMap.find(key) == defineMap.end());
+    if (defineMap.find(key) != defineMap.end()) {
+      cerr << key.first << " " << key.second << " defined twice" << endl;
+      exit(1);
+    }
     defineMap[key] = &d;
   }
 
@@ -427,7 +436,7 @@ bool link(const vector<string>& files)
     }
 
     if (d == NULL) {
-      cout << "Unresolved global \"" << u.name << "\"\n";
+      cerr << "Unresolved global \"" << u.name << "\"\n";
       exit(1);
     }
     u.var = d;
@@ -435,11 +444,11 @@ bool link(const vector<string>& files)
 
   for (int i = 0; i < allUses.size(); ++i) {
     Use& u = allUses[i];
-    cout << u.name << ":: "
-         << u.usingFunction << ":" << u.usingLine
-         << " -> " << u.var->definingFile << ":" << u.var->definingLine
-         << " (" << u.var->definingTU << ")"
-         << endl;
+    out << u.name << ":: "
+        << u.usingFunction << ":" << u.usingLine
+        << " -> " << u.var->definingFile << ":" << u.var->definingLine
+        << " (" << u.var->definingTU << ")"
+        << endl;
   }
 }
 
@@ -453,6 +462,7 @@ int main(int argc, char* argv[])
     cerr << "Ignoring the following parameters:";
     copy(IgnoredParams.begin(), IgnoredParams.end(),
         ostream_iterator<string>(cerr, " "));
+    cerr << endl;
   }
 
   enum { COMPILE, LINK } mode = COMPILE;
@@ -471,6 +481,8 @@ int main(int argc, char* argv[])
     compile(out, InputFilenames[0]);
     out.close();
   } else {
-    link(InputFilenames);
+    ofstream out(OutputFilename.c_str());
+    link(out, InputFilenames);
+    out.close();
   }
 }
