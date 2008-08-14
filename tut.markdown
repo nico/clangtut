@@ -298,6 +298,11 @@ presentational).
 
 Good: Clients do not have to take care of this
 
+Need to ignore globals in system headers. Tricky: Where to put -I files? Need
+them as users for some dirs (., proto), as system for others (python). For now
+keep them as system and whitelist `.`. This drops proto, but that's ok for
+now.
+
 
 ideas
 ---

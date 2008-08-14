@@ -117,6 +117,8 @@ public:
     }
   }
 
+  // XXX: should either be directly in visitor or some RecursiveVisitor
+  // subclass thereof.
   void VisitStmt(Stmt* stmt) {
     Stmt::child_iterator CI, CE = stmt->child_end();
     for (CI = stmt->child_begin(); CI != CE; ++CI) {
@@ -174,26 +176,39 @@ public:
       fu.process(functions[i]);
     }
 
-    int count = 0;
     vector<DeclRefExpr*> allUses;
+    vector<VarDecl*> interestingGlobals;
     for (int i = 0; i < globals.size(); ++i) {
+
+      // skip globals from system headers
       VarDecl* VD = globals[i].first;
+      FullSourceLoc loc(VD->getLocation(), *sm);
+      //if (strcmp(VD->getName(), "PyType_Type") == 0) {
+        //cout << loc.isInSystemHeader() << loc.getSourceName() << endl;
+      //}
+      //if (strcmp(loc.getSourceName(), "./globals.h") == 0) {
+        //cerr << loc.isInSystemHeader() << loc.getSourceName() << endl;
+      //}
+      if (loc.isFileID() && loc.isInSystemHeader()) continue;
+
+
 
       //allUses.append(uses[VD].begin(), uses[VD].end());
       allUses.insert(allUses.end(), uses[VD].begin(), uses[VD].end());
 
-      if (globals[i].second)
-        ++count;
-    }
-
-    out << count << " defines\n";
-    for (int i = 0; i < globals.size(); ++i) {
+      // externs should not be printed as defined vars, but they
+      // should be included in the use list
       if (!globals[i].second) continue;
 
-      VarDecl* VD = globals[i].first;
-      FullSourceLoc loc(VD->getLocation(), *sm);
-      bool isStatic = VD->getStorageClass() == VarDecl::Static;
+      interestingGlobals.push_back(VD);
+    }
 
+    out << interestingGlobals.size() << " defines\n";
+    for (int i = 0; i < interestingGlobals.size(); ++i) {
+      VarDecl* VD = interestingGlobals[i];
+      FullSourceLoc loc(VD->getLocation(), *sm);
+
+      bool isStatic = VD->getStorageClass() == VarDecl::Static;
       out
           //<< "<span class=\"global\">"
           << loc.getSourceName() << ":" << loc.getLogicalLineNumber() << " "
@@ -204,12 +219,22 @@ public:
           ;
     }
 
-    out << allUses.size() << " uses\n";
-    //out << "<span class=\"uses\">";
+    vector<DeclRefExpr*> allInterestingUses;
     for (int j = 0; j < allUses.size(); ++j) {
       DeclRefExpr* dre = allUses[j];
+      FullSourceLoc loc(dre->getLocStart(), *sm);
+      // Skip uses in functions from system headers
+      if (loc.isFileID() && loc.isInSystemHeader()) continue;
+      allInterestingUses.push_back(dre);
+    }
+
+    out << allInterestingUses.size() << " uses\n";
+    //out << "<span class=\"uses\">";
+    for (int j = 0; j < allInterestingUses.size(); ++j) {
+      DeclRefExpr* dre = allInterestingUses[j];
       FunctionDecl* fd = enclosing[dre];
       FullSourceLoc loc(dre->getLocStart(), *sm);
+
       out
           //<< "  "
           << fd->getName() << ":"
@@ -252,7 +277,8 @@ void addIncludesAndDefines(PPContext& c) {/*{{{*/
   // user headers
   for (int i = 0; i < I_dirs.size(); ++i) {
     cerr << "adding " << I_dirs[i] << endl;
-    addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, c.fm);
+    //addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, c.fm);
+    addIncludePath(dirs, I_dirs[i], DirectoryLookup::SystemHeaderDir, c.fm);
   }
 
   // include paths {{{
@@ -425,6 +451,8 @@ bool link(ostream& out, const vector<string>& files)
   for (int i = 0; i < allUses.size(); ++i) {
     Use& u = allUses[i];
     Define* d = NULL;
+
+    //cout << u.usingTU << " " << u.name << endl;
 
     // look up static global
     if (defineMap.find(make_pair(u.usingTU, u.name)) != defineMap.end())
