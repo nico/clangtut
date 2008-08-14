@@ -231,7 +231,7 @@ I_dirs("I", llvm::cl::value_desc("directory"), llvm::cl::Prefix,
 
 static llvm::cl::list<string>
 InputFilenames(llvm::cl::Positional, llvm::cl::desc("<input file>"),
-    llvm::cl::Required);
+    llvm::cl::OneOrMore);
 
 //static llvm::cl::opt<llvm::sys::Path>
 static llvm::cl::opt<string>
@@ -405,17 +405,32 @@ bool link(const vector<string>& files)
   map<pair<string, string>, Define*> defineMap;
   for (int i = 0; i < allDefines.size(); ++i) {
     Define& d = allDefines[i];
-    assert(defineMap.find(make_pair(d.definingTU, d.name)) == defineMap.end());
-    defineMap[make_pair(d.definingTU, d.name)] = &d;
+    pair<string, string> key("", d.name);
+    if (d.isStatic)
+      key.first = d.definingTU;
+    //cout << key.first << " " << key.second << endl;
+    assert(defineMap.find(key) == defineMap.end());
+    defineMap[key] = &d;
   }
 
   for (int i = 0; i < allUses.size(); ++i) {
     Use& u = allUses[i];
-    if (defineMap.find(make_pair(u.usingTU, u.name)) == defineMap.end()) {
+    Define* d = NULL;
+
+    // look up static global
+    if (defineMap.find(make_pair(u.usingTU, u.name)) != defineMap.end())
+      d = defineMap[make_pair(u.usingTU, u.name)];
+
+    // look up general global
+    if (d == NULL && defineMap.find(make_pair("", u.name)) != defineMap.end()) {
+      d = defineMap[make_pair("", u.name)];
+    }
+
+    if (d == NULL) {
       cout << "Unresolved global \"" << u.name << "\"\n";
       exit(1);
     }
-    u.var = defineMap[make_pair(u.usingTU, u.name)];
+    u.var = d;
   }
 
   for (int i = 0; i < allUses.size(); ++i) {
@@ -423,6 +438,7 @@ bool link(const vector<string>& files)
     cout << u.name << ":: "
          << u.usingFunction << ":" << u.usingLine
          << " -> " << u.var->definingFile << ":" << u.var->definingLine
+         << " (" << u.var->definingTU << ")"
          << endl;
   }
 }
