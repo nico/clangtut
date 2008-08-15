@@ -511,47 +511,54 @@ bool link(ostream& out, const vector<string>& files)
   for (int i = 0; i < allUses.size(); ++i) {
     Use& u = allUses[i];
 
+    int start = i;
+    int tuCount = 0;
+    ostringstream tmp;
+    while (i < allUses.size() && allUses[i].var == allUses[start].var) {
+      int tuStart = i;
 
-    if (u.var != currVar) {
-      if (i != 0) {
-        out << "</code></pre></div>" << endl;
-        out << "</div></div>" << endl << endl;
+      ostringstream tmq;
+      while (i < allUses.size()
+          && allUses[i].var == allUses[start].var
+          && allUses[i].usingTU == allUses[tuStart].usingTU) {
+        Use& u = allUses[i];
+        tmq << "  " << u.usingFunction << ":" << u.usingLine << endl;
+        ++i;
       }
-
-      out << "<div class=\"global\">";
-      // XXX: num total uses
-
-      out << endl << "<div class=\"head\"><code class=\"name\">"
-          << u.var->name << "</code><span class=\"totalcount\">"
-          << " (XXX uses)" << "</span>" << endl
-          << "<span class=\"defineinfo\">"
-          << "defined " << (u.var->isStatic?"static ":"")
-          << "in translation unit " << u.var->definingTU
-          << ", declared in "
-          << u.var->definingFile << ":" << u.var->definingLine
-          << "</span></div>"
-          << endl
-          << "<div class=\"uses\">";
-      currVar = u.var;
-      currUseTU = "";
-    }
-    if (currUseTU != u.usingTU) {
-      if (currUseTU != "") {
-        out << "</code></pre></div>" << endl;
-      }
-      // XXX: num uses per tu
-      out << "<div class=\"usefile\"><div class=\"file\">"
+      int uses = i - tuStart;
+      tmp << "<div class=\"usefile\"><div class=\"file\">"
           << "<span class=\"filename\">"
-          << u.usingTU << "</span><span class=\"filecount\">"
-          << " (XXX uses)" << "</span></div>" << endl;
-      out << "<pre><code>";
-      currUseTU = u.usingTU;
+          << allUses[tuStart].usingTU << "</span><span class=\"filecount\">"
+          << " (" << uses << " use" << (uses!=1?"s":"") << ")"
+          << "</span></div>" << endl;
+      tmp << "<pre><code>";
+      tmp << tmq.str();
+      tmp << "</code></pre></div>";
+      ++tuCount;
     }
-    out << "  " << u.usingFunction << ":" << u.usingLine << endl;
 
+    out << "<div class=\"global"
+        << (allUses[start].var->isStatic?" static":"") << "\">";
+    // XXX: num total uses
+
+    int uses = i - start;
+    out << endl << "<div class=\"head\"><code class=\"name\">"
+        << allUses[start].var->name << "</code><span class=\"totalcount\">"
+        << " (" << uses << " use" << (uses!=1?"s":"")
+        << " in " << tuCount
+        << " translation unit" << (tuCount!=1?"s":"") << ")"
+        << "</span>" << endl
+        << "<span class=\"defineinfo\">"
+        << "defined " << (u.var->isStatic?"static ":"")
+        << "in translation unit " << u.var->definingTU
+        << ", declared in "
+        << u.var->definingFile << ":" << u.var->definingLine
+        << "</span></div>"
+        << endl
+        << "<div class=\"uses\">";
+    out << tmp.str();
+    out << "</div></div>" << endl << endl;
   }
-  out << "</code></pre></div>" << endl;
-  out << "</div></div>" << endl << endl;
 }
 
 int main(int argc, char* argv[])
