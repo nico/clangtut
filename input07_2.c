@@ -13,6 +13,8 @@ int g()
   int u = bla;
   int v = blah;
   int w = blubb;
+
+  printf("%d", 0?(1?bla:blah):1);
 }
 
 int main()

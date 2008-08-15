@@ -16,7 +16,7 @@
 }
 .head {
   line-height: 100%;
-  margin-top: 10px;
+  padding-top: 10px;
   padding-left: 5px;
 }
 .head:hover {
@@ -62,7 +62,7 @@ pre {
 </script>
 <script type="text/javascript">
 $(document).ready(function() {
-  $('pre').hide();
+  $('div.usefile + div.usefile > pre').hide();  /* don't hide first file */
   $('.file').click(function() {
     $(this).next().slideToggle();
   });

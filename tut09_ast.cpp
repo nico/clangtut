@@ -380,6 +380,7 @@ void parseNameColonNumber(istream& in, string& nameOut, int& numOut)
 {
   string dummy; in >> dummy;
   string::size_type p = dummy.find(":");
+  assert(p != string::npos);
   nameOut = dummy.substr(0, p);
   numOut = atoi(dummy.substr(p + 1).c_str());
 }
@@ -390,6 +391,7 @@ struct Define {
   int definingLine;
   bool isStatic;
   string name;
+  int numUses;
 };
 
 struct Use {
@@ -409,9 +411,11 @@ string to_upper(string s) {  // migth also use an ic_string (new char_traits)
 }
 
 bool operator<(const Use& a, const Use& b) {
-  // XXX: sort by number of uses first?
+  // sort by number of uses first
+  if (a.var->numUses != b.var->numUses)
+    return a.var->numUses > b.var->numUses;  // descending
 
-  // sort by name and staticness first
+  // sort by name and staticness
   if (to_upper(a.name) != to_upper(b.name))
     return to_upper(a.name) < to_upper(b.name);
   if (a.var->isStatic != b.var->isStatic)
@@ -472,6 +476,7 @@ bool link(ostream& out, const vector<string>& files)
       cerr << key.first << " " << key.second << " defined twice" << endl;
       exit(1);
     }
+    d.numUses =  0;
     defineMap[key] = &d;
   }
 
@@ -495,6 +500,7 @@ bool link(ostream& out, const vector<string>& files)
       exit(1);
     }
     u.var = d;
+    d->numUses++;
   }
 
   sort(allUses.begin(), allUses.end());
@@ -508,7 +514,7 @@ bool link(ostream& out, const vector<string>& files)
   //}
   Define* currVar = NULL;
   string currUseTU = "";
-  for (int i = 0; i < allUses.size(); ++i) {
+  for (int i = 0; i < allUses.size();) {
     Use& u = allUses[i];
 
     int start = i;
