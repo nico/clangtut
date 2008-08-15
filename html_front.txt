@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Global variables</title>
+
+<style type="text/css">
+.global {
+  background-color: #F6F6F6;
+  border: 1px solid #CCCCCC;
+  margin-bottom: 10px;
+  margin-left: 0px;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  
+}
+.head {
+  line-height: 100%;
+  margin-top: 10px;
+  padding-left: 5px;
+  border-bottom: 1px solid #CCCCCC;
+}
+.head:hover {
+  /*text-decoration: underline;*/
+  color: blue;
+  cursor: pointer;
+}
+.name {
+  font-size: 24px;
+}
+.totalcount {
+  font-size: 12px;
+  margin-left: 5px;
+  color: #888888;
+}
+.filecount {
+  font-size: 12px;
+  color: #888888;
+}
+.defineinfo {
+  display: block;
+  font-size: 12px;
+  color: #888888;
+}
+.file:hover {
+  /*text-decoration: underline;*/
+  color: blue;
+  cursor: pointer;
+}
+.uses {
+  padding-left: 5px;
+  padding-top: 3px;
+}
+pre {
+  margin: 0px;
+  margin-bottom: 6px;
+}
+</style>
+
+<script type="text/javascript"
+  src="http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js">
+</script>
+<script type="text/javascript">
+$(document).ready(function() {
+  $('pre').hide();
+  $('.file').click(function() {
+    $(this).next().slideToggle();
+  });
+  $('.uses').hide();
+  $('.head').click(function() {
+    $(this).next().slideToggle();
+  });
+});
+</script>
+</head>
+<body>
+<h2>TODO</h2>
+<ul>
+  <li>Sort by usage/name</li>
+  <li>hide <code>static</code> globals</li>
+  <li>global types?</li>
+  <li>show declaring code?</li>
+  <li>show code lines that use globals?</li>
+</ul>
+<h1>Globals</h1>
+

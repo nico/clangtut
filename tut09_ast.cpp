@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <iterator>
 #include <vector>
 #include <map>
+#include <cctype>
 using namespace std;
 
 #include "clang/Basic/Diagnostic.h"
@@ -398,6 +400,31 @@ struct Use {
   Define* var;
 };
 
+char mylower(char c) { return tolower(c); }
+
+string to_upper(string s) {  // migth also use an ic_string (new char_traits)
+  toupper(s[0]);
+  transform(s.begin(), s.end(), s.begin(), mylower);
+  return s;
+}
+
+bool operator<(const Use& a, const Use& b) {
+  // XXX: sort by number of uses first?
+
+  // sort by name and staticness first
+  if (to_upper(a.name) != to_upper(b.name))
+    return to_upper(a.name) < to_upper(b.name);
+  if (a.var->isStatic != b.var->isStatic)
+    return a.var->isStatic < b.var->isStatic;
+
+  // then by usage place
+  if (a.usingTU != b.usingTU)
+    return a.usingTU < b.usingTU;
+  if (a.usingFunction != b.usingFunction)
+    return a.usingFunction < b.usingFunction;
+  return a.usingLine < b.usingLine;
+}
+
 bool link(ostream& out, const vector<string>& files)
 {
   vector<Define> allDefines;
@@ -470,14 +497,61 @@ bool link(ostream& out, const vector<string>& files)
     u.var = d;
   }
 
+  sort(allUses.begin(), allUses.end());
+  //for (int i = 0; i < allUses.size(); ++i) {
+    //Use& u = allUses[i];
+    //out << u.name << ":: "
+        //<< u.usingFunction << ":" << u.usingLine
+        //<< " -> " << u.var->definingFile << ":" << u.var->definingLine
+        //<< " (" << u.var->definingTU << ")"
+        //<< endl;
+  //}
+  Define* currVar = NULL;
+  string currUseTU = "";
   for (int i = 0; i < allUses.size(); ++i) {
     Use& u = allUses[i];
-    out << u.name << ":: "
-        << u.usingFunction << ":" << u.usingLine
-        << " -> " << u.var->definingFile << ":" << u.var->definingLine
-        << " (" << u.var->definingTU << ")"
-        << endl;
+
+
+    if (u.var != currVar) {
+      if (i != 0) {
+        out << "</code></pre></div>" << endl;
+        out << "</div></div>" << endl << endl;
+      }
+
+      out << "<div class=\"global\">";
+      // XXX: num total uses
+
+      out << endl << "<div class=\"head\"><code class=\"name\">"
+          << u.var->name << "</code><span class=\"totalcount\">"
+          << " (XXX uses)" << "</span>" << endl
+          << "<span class=\"defineinfo\">"
+          << "defined " << (u.var->isStatic?"static ":"")
+          << "in translation unit " << u.var->definingTU
+          << ", declared in "
+          << u.var->definingFile << ":" << u.var->definingLine
+          << "</span></div>"
+          << endl
+          << "<div class=\"uses\">";
+      currVar = u.var;
+      currUseTU = "";
+    }
+    if (currUseTU != u.usingTU) {
+      if (currUseTU != "") {
+        out << "</code></pre></div>" << endl;
+      }
+      // XXX: num uses per tu
+      out << "<div class=\"usefile\"><div class=\"file\">"
+          << "<span class=\"filename\">"
+          << u.usingTU << "</span><span class=\"filecount\">"
+          << " (XXX uses)" << "</span></div>" << endl;
+      out << "<pre><code>";
+      currUseTU = u.usingTU;
+    }
+    out << "  " << u.usingFunction << ":" << u.usingLine << endl;
+
   }
+  out << "</code></pre></div>" << endl;
+  out << "</div></div>" << endl << endl;
 }
 
 int main(int argc, char* argv[])
@@ -485,6 +559,12 @@ int main(int argc, char* argv[])
   llvm::cl::ParseCommandLineOptions(argc, argv, " globalcollect\n"
       "  This collects and prints global variables found in C programs.");
   llvm::sys::PrintStackTraceOnErrorSignal();
+
+  llvm::sys::Path MainExecutablePath = 
+     llvm::sys::Path::GetMainExecutable(argv[0], (void*)(intptr_t)main);
+  assert (!MainExecutablePath.isEmpty() && "could not locate myself");
+  MainExecutablePath.eraseComponent();  // remove executable name
+
 
   if (!IgnoredParams.empty()) {
     cerr << "Ignoring the following parameters:";
@@ -510,7 +590,20 @@ int main(int argc, char* argv[])
     out.close();
   } else {
     ofstream out(OutputFilename.c_str());
+
+    llvm::sys::Path frontName = MainExecutablePath;
+    frontName.appendComponent("html_front.txt");
+    ifstream frontFile(frontName.toString().c_str());
+    out << frontFile.rdbuf();
+
+
     link(out, InputFilenames);
+
+    llvm::sys::Path backName = MainExecutablePath;
+    backName.appendComponent("html_back.txt");
+    ifstream backFile(backName.toString().c_str());
+    out << backFile.rdbuf();
+
     out.close();
   }
 }
