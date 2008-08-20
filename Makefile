@@ -6,7 +6,7 @@ CXXFLAGS=-I/Users/nico/src/llvm-svn/tools/clang/include \
 # clangAST and clangSema required starting from tut06
 LDFLAGS=-lclangBasic -lclangLex -lclangParse -lclangSema -lclangAST \
 		-lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter \
-		-lclangDriver \
+		-lclangRewrite -lclangDriver \
 		 `/Users/nico/src/llvm-svn/Debug/bin/llvm-config --ldflags`
 
 tut09: tut09_ast.o

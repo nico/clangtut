@@ -303,6 +303,10 @@ them as users for some dirs (., proto), as system for others (python). For now
 keep them as system and whitelist `.`. This drops proto, but that's ok for
 now.
 
+Careful: Need to collect globals on the rhs of toplevel inits, too (XXX).
+
+What about multiple declarations (e.g. `gui`)?
+
 
 ideas
 ---

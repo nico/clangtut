@@ -25,8 +25,11 @@ using namespace std;
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TranslationUnit.h"
 
-#include "llvm/System/Path.h"
+#include "clang/Rewrite/HTMLRewrite.h"
+
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/System/Path.h"
 #include "llvm/System/Signals.h"
 
 #include "clang/Driver/TextDiagnosticPrinter.h"
@@ -96,6 +99,21 @@ static void DefineBuiltinMacro(std::vector<char> &Buf, const char *Macro,
   Buf.push_back('\n');
 }
 // }}}
+
+string getContainingLine(FullSourceLoc Pos) {
+  assert(Pos.isValid());
+  FullSourceLoc LPos = Pos.getLogicalLoc();
+  const char* lTokPtr = LPos.getCharacterData();
+  const char* start = lTokPtr - LPos.getColumnNumber() + 1;
+
+  const llvm::MemoryBuffer *Buffer = LPos.getBuffer();
+  const char *BufEnd = Buffer->getBufferEnd();
+  const char* end = lTokPtr;
+  while (end != BufEnd && 
+      *end != '\n' && *end != '\r')
+    ++end;
+  return string(start, end);
+}
 
 // XXX: use some llvm map?
 typedef map<VarDecl*, vector<DeclRefExpr*> > UsageMap;
@@ -242,6 +260,8 @@ public:
           << fd->getName() << ":"
           << loc.getLogicalLineNumber()
           << " " << dre->getDecl()->getName()
+          << "\n"
+          << getContainingLine(loc)
           << "\n";
     }
     //out << "</span>";
@@ -397,9 +417,10 @@ struct Define {
 struct Use {
   string usingTU;
   string usingFunction;
-  int usingLine;
+  int usingLineNr;
   string name;
   Define* var;
+  string line;
 };
 
 char mylower(char c) { return tolower(c); }
@@ -424,9 +445,13 @@ bool operator<(const Use& a, const Use& b) {
   // then by usage place
   if (a.usingTU != b.usingTU)
     return a.usingTU < b.usingTU;
-  if (a.usingFunction != b.usingFunction)
-    return a.usingFunction < b.usingFunction;
-  return a.usingLine < b.usingLine;
+
+  //if (a.usingFunction != b.usingFunction)
+    //return a.usingFunction < b.usingFunction;
+  // line number usually implies function
+  if (a.usingLineNr != b.usingLineNr)
+    return a.usingLineNr < b.usingLineNr;
+  return a.usingFunction < b.usingFunction;
 }
 
 bool link(ostream& out, const vector<string>& files)
@@ -460,8 +485,9 @@ bool link(ostream& out, const vector<string>& files)
     for (int j = 0; j < numUses; ++j) {
       Use u;
       u.usingTU = inName;
-      parseNameColonNumber(in, u.usingFunction, u.usingLine);
-      in >> u.name;
+      parseNameColonNumber(in, u.usingFunction, u.usingLineNr);
+      in >> u.name; in.get();
+      getline(in, u.line);
       allUses.push_back(u);
     }
   }
@@ -503,11 +529,20 @@ bool link(ostream& out, const vector<string>& files)
     d->numUses++;
   }
 
+  int numStatics = 0;
+  for (int i = 0; i < allDefines.size(); ++i) {
+    if (allDefines[i].isStatic)
+      ++numStatics;
+  }
+
+  out << "<p>" << allDefines.size() << " globals defined, " << numStatics
+      << " of them are <code>static</code>.</p>" << endl;
+
   sort(allUses.begin(), allUses.end());
   //for (int i = 0; i < allUses.size(); ++i) {
     //Use& u = allUses[i];
     //out << u.name << ":: "
-        //<< u.usingFunction << ":" << u.usingLine
+        //<< u.usingFunction << ":" << u.usingLineNr
         //<< " -> " << u.var->definingFile << ":" << u.var->definingLine
         //<< " (" << u.var->definingTU << ")"
         //<< endl;
@@ -515,8 +550,6 @@ bool link(ostream& out, const vector<string>& files)
   Define* currVar = NULL;
   string currUseTU = "";
   for (int i = 0; i < allUses.size();) {
-    Use& u = allUses[i];
-
     int start = i;
     int tuCount = 0;
     ostringstream tmp;
@@ -527,9 +560,19 @@ bool link(ostream& out, const vector<string>& files)
       while (i < allUses.size()
           && allUses[i].var == allUses[start].var
           && allUses[i].usingTU == allUses[tuStart].usingTU) {
-        Use& u = allUses[i];
-        tmq << "  " << u.usingFunction << ":" << u.usingLine << endl;
-        ++i;
+
+        int funcStart = i;
+        ostringstream tmr;
+        while (i < allUses.size()
+            && allUses[i].var == allUses[start].var
+            && allUses[i].usingTU == allUses[tuStart].usingTU
+            && allUses[i].usingFunction == allUses[funcStart].usingFunction) {
+          Use& u = allUses[i];
+          tmr << "  " << u.usingLineNr << ": " << html::EscapeText(u.line)
+              << endl;
+          ++i;
+        }
+        tmq << "  " << allUses[funcStart].usingFunction << "():\n" << tmr.str();
       }
       int uses = i - tuStart;
       tmp << "<div class=\"usefile\"><div class=\"file\">"
@@ -548,6 +591,7 @@ bool link(ostream& out, const vector<string>& files)
     // XXX: num total uses
 
     int uses = i - start;
+    Define* var = allUses[start].var;
     out << endl << "<div class=\"head\"><code class=\"name\">"
         << allUses[start].var->name << "</code><span class=\"totalcount\">"
         << " (" << uses << " use" << (uses!=1?"s":"")
@@ -555,10 +599,10 @@ bool link(ostream& out, const vector<string>& files)
         << " translation unit" << (tuCount!=1?"s":"") << ")"
         << "</span>" << endl
         << "<span class=\"defineinfo\">"
-        << "defined " << (u.var->isStatic?"static ":"")
-        << "in translation unit " << u.var->definingTU
+        << "defined " << (var->isStatic?"static ":"")
+        << "in translation unit " << var->definingTU
         << ", declared in "
-        << u.var->definingFile << ":" << u.var->definingLine
+        << var->definingFile << ":" << var->definingLine
         << "</span></div>"
         << endl
         << "<div class=\"uses\">";

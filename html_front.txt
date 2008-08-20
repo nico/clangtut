@@ -20,9 +20,8 @@
   padding-left: 5px;
 }
 .head:hover {
-  /*text-decoration: underline;*/
-  color: blue;
   cursor: pointer;
+  background-color: #ffffe0;
 }
 .name {
   font-size: 24px;
@@ -41,18 +40,20 @@
   font-size: 12px;
   color: #888888;
 }
+.file {
+  padding-left: 5px;
+}
 .file:hover {
-  /*text-decoration: underline;*/
-  color: blue;
+  background-color: #ffffe0;
   cursor: pointer;
 }
 .uses {
-  padding-left: 5px;
   padding-top: 3px;
   border-top: 1px solid #cccccc;
 }
 pre {
   margin: 0px;
+  padding-left: 5px;
   margin-bottom: 6px;
 }
 </style>
@@ -72,10 +73,10 @@ $(document).ready(function() {
   });
   $('a#toggle').click(function() {
     $('.static').toggle();
-    if ($(this).text() == 'Show statics')
-      $(this).text('Hide statics')
+    if ($(this).text() == 'Show static globals')
+      $(this).text('Hide static globals')
     else
-      $(this).text('Show statics')
+      $(this).text('Show static globals')
     return false;
   });
 });
@@ -92,4 +93,4 @@ $(document).ready(function() {
 </ul>-->
 <h1>Globals</h1>
 
-<a href="" id="toggle">Hide statics</a>
+<a href="" id="toggle">Hide static globals</a>
