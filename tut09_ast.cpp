@@ -41,23 +41,6 @@ using namespace clang;
 
 #include "PreprocessorContext.h"
 
-// serializer {{{
-class Serializer : public ASTConsumer {
-  TranslationUnit* TU;
-  const llvm::sys::Path FName;
-public:
-  Serializer(const llvm::sys::Path& F) : TU(0), FName(F) {}    
-  
-  ~Serializer() {
-    EmitASTBitcodeFile(TU, FName);
-  }
-
-  virtual void InitializeTU(TranslationUnit &tu) {
-    TU = &tu;
-  }
-};
-// }}}
-
 // include and define funcs {{{
 void addIncludePath(vector<DirectoryLookup>& paths,
     const string& path,
@@ -203,14 +186,7 @@ public:
       // skip globals from system headers
       VarDecl* VD = globals[i].first;
       FullSourceLoc loc(VD->getLocation(), *sm);
-      //if (strcmp(VD->getName(), "PyType_Type") == 0) {
-        //cout << loc.isInSystemHeader() << loc.getSourceName() << endl;
-      //}
-      //if (strcmp(loc.getSourceName(), "./globals.h") == 0) {
-        //cerr << loc.isInSystemHeader() << loc.getSourceName() << endl;
-      //}
       if (loc.isFileID() && loc.isInSystemHeader()) continue;
-
 
 
       //allUses.append(uses[VD].begin(), uses[VD].end());
@@ -229,14 +205,9 @@ public:
       FullSourceLoc loc(VD->getLocation(), *sm);
 
       bool isStatic = VD->getStorageClass() == VarDecl::Static;
-      out
-          //<< "<span class=\"global\">"
-          << loc.getSourceName() << ":" << loc.getLogicalLineNumber() << " "
+      out << loc.getSourceName() << ":" << loc.getLogicalLineNumber() << " "
           << (isStatic?"static ":"") << VD->getName()
-          //<< "  (" << uses[VD].size() << " local uses)"
-          << "\n"
-          //<< "</span>"
-          ;
+          << "\n";
     }
 
     vector<DeclRefExpr*> allInterestingUses;
@@ -255,16 +226,13 @@ public:
       FunctionDecl* fd = enclosing[dre];
       FullSourceLoc loc(dre->getLocStart(), *sm);
 
-      out
-          //<< "  "
-          << fd->getName() << ":"
+      out << fd->getName() << ":"
           << loc.getLogicalLineNumber()
           << " " << dre->getDecl()->getName()
           << "\n"
           << getContainingLine(loc)
           << "\n";
     }
-    //out << "</span>";
   }
 };
 
@@ -359,10 +327,6 @@ bool compile(ostream& out, const string& inFile)
   }
   context.sm.createMainFileID(File, SourceLocation());
 
-  // Serialize it
-  //ASTConsumer* c = new Serializer(OutputPath);
-  //ParseAST(context.pp, c);  // deletes c
-
 
   if (!out) {
     cerr << "Failed to open \'" << OutputFilename << "\'" << endl;
@@ -372,18 +336,11 @@ bool compile(ostream& out, const string& inFile)
 
   //// Parse it
 
-  out
-      //<< "<h2><code>"
-      << InputFilenames[0]
-      //<< "</code></h2>" << endl
-      << endl;
-  //out << "<pre><code>";
+  out << InputFilenames[0] << endl;
 
   ASTConsumer* c = new MyASTConsumer(out);
   ParseAST(context.pp, c);
   delete c;
-
-  //out << "</code></pre>" << endl << endl;
 
   out << endl;
 
@@ -446,8 +403,6 @@ bool operator<(const Use& a, const Use& b) {
   if (a.usingTU != b.usingTU)
     return a.usingTU < b.usingTU;
 
-  //if (a.usingFunction != b.usingFunction)
-    //return a.usingFunction < b.usingFunction;
   // line number usually implies function
   if (a.usingLineNr != b.usingLineNr)
     return a.usingLineNr < b.usingLineNr;
@@ -510,8 +465,6 @@ bool link(ostream& out, const vector<string>& files)
     Use& u = allUses[i];
     Define* d = NULL;
 
-    //cout << u.usingTU << " " << u.name << endl;
-
     // look up static global
     if (defineMap.find(make_pair(u.usingTU, u.name)) != defineMap.end())
       d = defineMap[make_pair(u.usingTU, u.name)];
@@ -539,14 +492,6 @@ bool link(ostream& out, const vector<string>& files)
       << " of them are <code>static</code>.</p>" << endl;
 
   sort(allUses.begin(), allUses.end());
-  //for (int i = 0; i < allUses.size(); ++i) {
-    //Use& u = allUses[i];
-    //out << u.name << ":: "
-        //<< u.usingFunction << ":" << u.usingLineNr
-        //<< " -> " << u.var->definingFile << ":" << u.var->definingLine
-        //<< " (" << u.var->definingTU << ")"
-        //<< endl;
-  //}
   Define* currVar = NULL;
   string currUseTU = "";
   for (int i = 0; i < allUses.size();) {
