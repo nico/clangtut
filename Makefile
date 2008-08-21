@@ -4,10 +4,19 @@ CXXFLAGS=-I/Users/nico/src/llvm-svn/tools/clang/include \
 
 # clangParse required starting from tut04
 # clangAST and clangSema required starting from tut06
+# clangRewrite required in tut09
 LDFLAGS=-lclangBasic -lclangLex -lclangParse -lclangSema -lclangAST \
 		-lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter \
 		-lclangRewrite -lclangDriver \
 		 `/Users/nico/src/llvm-svn/Debug/bin/llvm-config --ldflags`
+
+all: tut01 tut02 tut03 tut04 tut05 tut06 tut07 tut08 tut09
+
+clean:
+	rm -rf tut01 tut02 tut03 tut04 tut05 tut06 tut08 tut09
+	rm -rf tut01_pp.o tut02_pp.o tut03_pp.o tut04_parse.o tut05_parse.o
+	rm -rf tut06_sema.o tut07_sema.o tut08_ast.o tut09_ast.o
+	rm -rf input07_1.o input07_2.o input07.html
 
 tut09: tut09_ast.o
 	g++ $(LDFLAGS) -o tut09 tut09_ast.o
@@ -35,8 +44,6 @@ tut02: tut02_pp.o
 
 tut01: tut01_pp.o
 	g++ $(LDFLAGS) -o tut01 tut01_pp.o
-
-all: tut01 tut02 tut03 tut04 tut05 tut06 tut07 tut08 tut09
 
 test: all
 	./tut01
