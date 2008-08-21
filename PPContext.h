@@ -13,8 +13,6 @@
 
 #include "clang/Driver/TextDiagnosticPrinter.h"
 
-namespace clang {
-
 struct PPContext {
   // Takes ownership of client.
   PPContext(DiagnosticClient* client = 0,
@@ -41,6 +39,3 @@ struct PPContext {
   HeaderSearch headers;
   Preprocessor pp;
 };
-
-}
-
