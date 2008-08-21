@@ -4,72 +4,15 @@
 #include <vector>
 using namespace std;
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/IdentifierTable.h"
-
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/Preprocessor.h"
-
 #include "clang/Sema/ParseAST.h"
-
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-
+#include "clang/Driver/InitHeaderSearch.h"
 #include "llvm/Support/CommandLine.h"
+#include "PPContext.h"
 
 using namespace clang;
-
-class DummyDiagnosticClient : public DiagnosticClient {
-public:
-  virtual void HandleDiagnostic(Diagnostic &Diags, 
-                                Diagnostic::Level DiagLevel,
-                                FullSourceLoc Pos,
-                                diag::kind ID,
-                                const std::string *Strs,
-                                unsigned NumStrs,
-                                const SourceRange *Ranges, 
-                                unsigned NumRanges) {
-
-    switch (DiagLevel) {
-    default: assert(0 && "Unknown diagnostic type!");
-    case Diagnostic::Note:    return; cerr << "note: "; break;
-    case Diagnostic::Warning: return; cerr << "warning: "; break;
-    case Diagnostic::Error:   cerr << "error: "; break;
-    case Diagnostic::Fatal:   cerr << "fatal error: "; break;
-      break;
-    }
-
-    //cerr << Pos.getLineNumber() << ' ';
-    cerr << Pos.getLogicalLineNumber() << ' ';
-    cerr << Diags.getDescription(ID) << endl;
-    for (int i = 0; i < NumStrs; ++i) {
-      cerr << "\t%" << i << ": " << Strs[i] << endl;
-    }
-    cerr << endl;
-  }
-};
-
-
-void addIncludePath(vector<DirectoryLookup>& paths,
-    const string& path,
-    DirectoryLookup::DirType type,
-    FileManager& fm,
-    bool isFramework = false)
-{
-  // If the directory exists, add it.
-  if (const DirectoryEntry *DE = fm.getDirectory(&path[0], 
-                                                 &path[0]+path.size())) {
-    bool isUserSupplied = false;
-    paths.push_back(DirectoryLookup(DE, type, isUserSupplied, isFramework));
-    return;
-  }
-  cerr << "Cannot find directory " << path << endl;
-}
-
 
 // This function is already in Preprocessor.cpp and clang.cpp. It should be
 // in a library.
@@ -103,6 +46,7 @@ public:
 
   virtual void HandleTopLevelDecl(Decl *D) {
     // XXX: does not print c in `int b, c;`.
+    // XXX: prints both declaration and defintion of `a` in input05.c
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
         FullSourceLoc loc(D->getLocation(), *sm);
@@ -144,55 +88,17 @@ int main(int argc, char* argv[])
   }
 
   // Create Preprocessor object
+  PPContext context;
 
-  DummyDiagnosticClient diagClient;
-  Diagnostic diags(diagClient);
-
-  LangOptions opts;
-
-  TargetInfo* target = TargetInfo::CreateTargetInfo("i386-apple-darwin");
-
-  SourceManager sm;
-
-  FileManager fm;
-  HeaderSearch headers(fm);
-
-  Preprocessor pp(diags, opts, *target, sm, headers);
-
-
-  // Add header search directories (C only, no C++ or ObjC)
-
-  vector<DirectoryLookup> dirs;
-
+  // Add header search directories
+  InitHeaderSearch init(context.headers);
   // user headers
   for (int i = 0; i < I_dirs.size(); ++i) {
     cerr << "adding " << I_dirs[i] << endl;
-    addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, fm);
+    init.AddPath(I_dirs[i], InitHeaderSearch::Angled, false, true, false);
   }
-
-  // This specifies where in `dirs` the system headers start. Quoted includes
-  // are searched for in all paths, angled includes only in the system headers.
-  // -I can point to the direction of e.g. Carbon.h, which is usually included
-  // in angle brackets. So we add everything to the system headers.
-  unsigned systemDirIdx = 0;
-
-  // system headers
-  addIncludePath(dirs, "/usr/include",
-      DirectoryLookup::SystemHeaderDir, fm);
-  addIncludePath(dirs, "/usr/local/include",
-      DirectoryLookup::SystemHeaderDir, fm);
-  addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
-      DirectoryLookup::SystemHeaderDir, fm);
-  addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
-      DirectoryLookup::SystemHeaderDir, fm);
-  addIncludePath(dirs, "/Library/Frameworks",
-      DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
-  addIncludePath(dirs, "/System/Library/Frameworks",
-      DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
-
-  bool noCurDirSearch = true;  // do not search in the current directory
-  headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
-
+  init.AddDefaultSystemIncludePaths(context.opts);
+  init.Realize();
 
   // Add defines passed in through parameters
   vector<char> predefineBuffer;
@@ -201,34 +107,30 @@ int main(int argc, char* argv[])
     DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
   }
   predefineBuffer.push_back('\0');
-  pp.setPredefines(&predefineBuffer[0]);
+  context.pp.setPredefines(&predefineBuffer[0]);
 
 
   // Add input file
-
-  const FileEntry* File = fm.getFile(InputFilename);
+  const FileEntry* File = context.fm.getFile(InputFilename);
   if (!File) {
     cerr << "Failed to open \'" << InputFilename << "\'" << endl;
     return EXIT_FAILURE;
   }
-  sm.createMainFileID(File, SourceLocation());
+  context.sm.createMainFileID(File, SourceLocation());
 
 
   // Parse it
-
   cout << "<h2><code>" << InputFilename << "</code></h2>" << endl << endl;
   cout << "<pre><code>";
 
-  ASTConsumer* c = new MyASTConsumer;
-  ParseAST(pp, c);  // deletes c
+  MyASTConsumer c;
+  ParseAST(context.pp, &c);
 
   cout << "</pre></code>" << endl << endl;
 
-  delete target;
-
   cout << endl;
 
-  unsigned NumDiagnostics = diags.getNumDiagnostics();
+  unsigned NumDiagnostics = context.diags.getNumDiagnostics();
   
   if (NumDiagnostics)
     fprintf(stderr, "%d diagnostic%s generated.\n", NumDiagnostics,

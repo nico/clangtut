@@ -19,7 +19,7 @@ int a = 3;
 
 struct Test {
   int a, b;
-} test;
+} test2;  // gives an error if TEST is not defined
 
 int anothervar;
 
@@ -43,7 +43,7 @@ int main()
 
   int b = a;
 
-  test.b = 80;
+  test2.b = 80;
 
   staticvar = 88;
 

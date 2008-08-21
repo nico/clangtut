@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #define EXTERN extern
 #define INIT(a) 
 

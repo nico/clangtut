@@ -203,6 +203,17 @@ consumption :-)
 call this yourself, else you get errors about duplicate definitions (because
 the main source file is entered twice into the pp's file list).
 
+Example:
+
+    predefines>:3:15: error: redefinition of '__builtin_va_list'
+    typedef char* __builtin_va_list;
+                  ^
+    <predefines>:3:15: error: previous definition is here
+    typedef char* __builtin_va_list;
+
+Happens also for stuff in your program.
+
+
 Now with own `MyASTConsumer`. Code slightly simpler (and much more correct)
 than the former version.
 

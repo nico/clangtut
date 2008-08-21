@@ -5,44 +5,15 @@
 #include <map>
 using namespace std;
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/IdentifierTable.h"
-
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/Preprocessor.h"
-
 #include "clang/Sema/ParseAST.h"
-
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/StmtVisitor.h"
-
+#include "clang/Driver/InitHeaderSearch.h"
 #include "llvm/Support/CommandLine.h"
-
-#include "clang/Driver/TextDiagnosticPrinter.h"
-
+#include "PPContext.h"
 using namespace clang;
-
-
-void addIncludePath(vector<DirectoryLookup>& paths,
-    const string& path,
-    DirectoryLookup::DirType type,
-    FileManager& fm,
-    bool isFramework = false)
-{
-  // If the directory exists, add it.
-  if (const DirectoryEntry *DE = fm.getDirectory(&path[0], 
-                                                 &path[0]+path.size())) {
-    bool isUserSupplied = false;
-    paths.push_back(DirectoryLookup(DE, type, isUserSupplied, isFramework));
-    return;
-  }
-  cerr << "Cannot find directory " << path << endl;
-}
 
 
 // This function is already in Preprocessor.cpp and clang.cpp. It should be
@@ -181,71 +152,6 @@ InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"),
 static llvm::cl::list<std::string> IgnoredParams(llvm::cl::Sink);
 static llvm::cl::opt<string> dummy("o", llvm::cl::desc("dummy for gcc compat"));
 
-struct PPContext {
-  PPContext()
-    : diags(diagClient),
-      target(TargetInfo::CreateTargetInfo("i386-apple-darwin")),
-      headers(fm),
-      pp(diags, opts, *target, sm, headers)
-  {}
-
-  ~PPContext()
-  { delete target; }
-
-  void addIncludesAndDefines() {
-    // Add header search directories (C only, no C++ or ObjC)
-
-    vector<DirectoryLookup> dirs;
-
-    // user headers
-    for (int i = 0; i < I_dirs.size(); ++i) {
-      cerr << "adding " << I_dirs[i] << endl;
-      addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, fm);
-    }
-
-    // This specifies where in `dirs` the system headers start. Quoted includes
-    // are searched for in all paths, angled includes only in the system headers.
-    // -I can point to the direction of e.g. Carbon.h, which is usually included
-    // in angle brackets. So we add everything to the system headers.
-    unsigned systemDirIdx = 0;
-
-    // system headers
-    addIncludePath(dirs, "/usr/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/usr/local/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
-        DirectoryLookup::SystemHeaderDir, fm);
-    addIncludePath(dirs, "/Library/Frameworks",
-        DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
-    addIncludePath(dirs, "/System/Library/Frameworks",
-        DirectoryLookup::SystemHeaderDir, fm, /*isFramework=*/true);
-
-    bool noCurDirSearch = true;  // do not search in the current directory
-    headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
-
-
-    // Add defines passed in through parameters
-    vector<char> predefineBuffer;
-    for (int i = 0; i < D_macros.size(); ++i) {
-      cerr << "defining " << D_macros[i] << endl;
-      DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
-    }
-    predefineBuffer.push_back('\0');
-    pp.setPredefines(&predefineBuffer[0]);
-  }
-
-  TextDiagnosticPrinter diagClient;
-  Diagnostic diags;
-  LangOptions opts;
-  TargetInfo* target;
-  SourceManager sm;
-  FileManager fm;
-  HeaderSearch headers;
-  Preprocessor pp;
-};
 
 int main(int argc, char* argv[])
 {
@@ -260,11 +166,28 @@ int main(int argc, char* argv[])
 
   // Create Preprocessor object
   PPContext context;
-  context.addIncludesAndDefines();
+
+  // Add header search directories (C only, no C++ or ObjC)
+  InitHeaderSearch init(context.headers);
+  // user headers
+  for (int i = 0; i < I_dirs.size(); ++i) {
+    cerr << "adding " << I_dirs[i] << endl;
+    init.AddPath(I_dirs[i], InitHeaderSearch::Angled, false, true, false);
+  }
+  init.AddDefaultSystemIncludePaths(context.opts);
+  init.Realize();
+
+  // Add defines passed in through parameters
+  vector<char> predefineBuffer;
+  for (int i = 0; i < D_macros.size(); ++i) {
+    cerr << "defining " << D_macros[i] << endl;
+    DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
+  }
+  predefineBuffer.push_back('\0');
+  context.pp.setPredefines(&predefineBuffer[0]);
 
 
   // Add input file
-
   const FileEntry* File = context.fm.getFile(InputFilename);
   if (!File) {
     cerr << "Failed to open \'" << InputFilename << "\'" << endl;
@@ -274,12 +197,11 @@ int main(int argc, char* argv[])
 
 
   // Parse it
-
   cout << "<h2><code>" << InputFilename << "</code></h2>" << endl << endl;
   cout << "<pre><code>";
 
-  ASTConsumer* c = new MyASTConsumer;
-  ParseAST(context.pp, c);  // deletes c
+  MyASTConsumer c;
+  ParseAST(context.pp, &c);
 
   cout << "</code></pre>" << endl << endl;
 

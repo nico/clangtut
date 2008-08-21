@@ -8,17 +8,7 @@
 #include <cctype>
 using namespace std;
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/IdentifierTable.h"
-
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/Preprocessor.h"
-
 #include "clang/Sema/ParseAST.h"
-
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -32,32 +22,13 @@ using namespace std;
 #include "llvm/System/Path.h"
 #include "llvm/System/Signals.h"
 
-#include "clang/Driver/TextDiagnosticPrinter.h"
-
-#include "llvm/Config/config.h"
+#include "clang/Driver/InitHeaderSearch.h"
+#include "PPContext.h"
 
 using namespace clang;
 
 
-#include "PreprocessorContext.h"
-
-// include and define funcs {{{
-void addIncludePath(vector<DirectoryLookup>& paths,
-    const string& path,
-    DirectoryLookup::DirType type,
-    FileManager& fm,
-    bool isFramework = false)
-{
-  // If the directory exists, add it.
-  if (const DirectoryEntry *DE = fm.getDirectory(&path[0], 
-                                                 &path[0]+path.size())) {
-    bool isUserSupplied = false;
-    paths.push_back(DirectoryLookup(DE, type, isUserSupplied, isFramework));
-    return;
-  }
-  cerr << "Cannot find directory " << path << endl;
-}
-
+// define funcs {{{
 
 // This function is already in Preprocessor.cpp and clang.cpp. It should be
 // in a library.
@@ -220,7 +191,6 @@ public:
     }
 
     out << allInterestingUses.size() << " uses\n";
-    //out << "<span class=\"uses\">";
     for (int j = 0; j < allInterestingUses.size(); ++j) {
       DeclRefExpr* dre = allInterestingUses[j];
       FunctionDecl* fd = enclosing[dre];
@@ -262,40 +232,16 @@ static llvm::cl::list<std::string> IgnoredParams(llvm::cl::Sink);
 void addIncludesAndDefines(PPContext& c) {/*{{{*/
   // Add header search directories (C only, no C++ or ObjC)
 
+  InitHeaderSearch init(c.headers);
   vector<DirectoryLookup> dirs;
 
   // user headers
   for (int i = 0; i < I_dirs.size(); ++i) {
     cerr << "adding " << I_dirs[i] << endl;
-    //addIncludePath(dirs, I_dirs[i], DirectoryLookup::NormalHeaderDir, c.fm);
-    addIncludePath(dirs, I_dirs[i], DirectoryLookup::SystemHeaderDir, c.fm);
+    // add as system header
+    init.AddPath(I_dirs[i], InitHeaderSearch::Angled, false, true, false);
+    //addIncludePath(dirs, I_dirs[i], DirectoryLookup::SystemHeaderDir, c.fm);
   }
-
-  // include paths {{{
-  // This specifies where in `dirs` the system headers start. Quoted includes
-  // are searched for in all paths, angled includes only in the system headers.
-  // -I can point to the direction of e.g. Carbon.h, which is usually included
-  // in angle brackets. So we add everything to the system headers.
-  unsigned systemDirIdx = 0;
-
-  // system headers
-  addIncludePath(dirs, "/usr/include",
-      DirectoryLookup::SystemHeaderDir, c.fm);
-  addIncludePath(dirs, "/usr/local/include",
-      DirectoryLookup::SystemHeaderDir, c.fm);
-  addIncludePath(dirs, "/usr/lib/gcc/i686-apple-darwin9/4.0.1/include",
-      DirectoryLookup::SystemHeaderDir, c.fm);
-  addIncludePath(dirs, "/usr/lib/gcc/powerpc-apple-darwin9/4.0.1/include",
-      DirectoryLookup::SystemHeaderDir, c.fm);
-  addIncludePath(dirs, "/Library/Frameworks",
-      DirectoryLookup::SystemHeaderDir, c.fm, /*isFramework=*/true);
-  addIncludePath(dirs, "/System/Library/Frameworks",
-      DirectoryLookup::SystemHeaderDir, c.fm, /*isFramework=*/true);
-  // }}}
-
-  bool noCurDirSearch = false;  // search in the current directory
-  c.headers.SetSearchPaths(dirs, systemDirIdx, noCurDirSearch);
-
 
   // Add defines passed in through parameters
   vector<char> predefineBuffer;
@@ -327,12 +273,10 @@ bool compile(ostream& out, const string& inFile)
   }
   context.sm.createMainFileID(File, SourceLocation());
 
-
   if (!out) {
     cerr << "Failed to open \'" << OutputFilename << "\'" << endl;
     return false;
   }
-  //ostream& out = cout;
 
   //// Parse it
 

@@ -1,3 +1,5 @@
+#ifndef PP_CONTEXT
+#define PP_CONTEXT
 
 #include <string>
 
@@ -15,11 +17,11 @@
 
 struct PPContext {
   // Takes ownership of client.
-  PPContext(DiagnosticClient* client = 0,
+  PPContext(clang::DiagnosticClient* client = 0,
             const std::string& triple = LLVM_HOSTTRIPLE)
-    : diagClient(client == 0?new TextDiagnosticPrinter:client),
+    : diagClient(client == 0?new clang::TextDiagnosticPrinter:client),
       diags(diagClient),
-      target(TargetInfo::CreateTargetInfo(triple)),
+      target(clang::TargetInfo::CreateTargetInfo(triple)),
       headers(fm),
       pp(diags, opts, *target, sm, headers)
   {}
@@ -30,12 +32,14 @@ struct PPContext {
     delete target;
   }
 
-  DiagnosticClient* diagClient;
-  Diagnostic diags;
-  LangOptions opts;
-  TargetInfo* target;
-  SourceManager sm;
-  FileManager fm;
-  HeaderSearch headers;
-  Preprocessor pp;
+  clang::DiagnosticClient* diagClient;
+  clang::Diagnostic diags;
+  clang::LangOptions opts;
+  clang::TargetInfo* target;
+  clang::SourceManager sm;
+  clang::FileManager fm;
+  clang::HeaderSearch headers;
+  clang::Preprocessor pp;
 };
+
+#endif

@@ -36,13 +36,29 @@ tut02: tut02_pp.o
 tut01: tut01_pp.o
 	g++ $(LDFLAGS) -o tut01 tut01_pp.o
 
-tut09_ast.o: tut09_ast.cpp PreprocessorContext.h
-tut08_ast.o: tut08_ast.cpp
-tut07_sema.o: tut07_sema.cpp
-tut06_sema.o: tut06_sema.cpp
-tut05_parse.o: tut05_parse.cpp
-tut04_parse.o: tut04_parse.cpp
-tut03_pp.o: tut03_pp.cpp
-tut02_pp.o: tut02_pp.cpp
+all: tut01 tut02 tut03 tut04 tut05 tut06 tut07 tut08 tut09
+
+test: all
+	./tut01
+	./tut02 input01.c
+	./tut03 input03.c
+	./tut04 input03.c
+	./tut05 input04.c
+	./tut06 input04.c
+	./tut07 -DTEST input05.c
+	./tut08 -DTEST input06.c
+	./tut09 -o input07_1.o input07_1.c
+	./tut09 -o input07_2.o input07_2.c
+	./tut09 -o input07.html input07_1.o input07_2.o
+	cat input07.html
+
+tut09_ast.o: tut09_ast.cpp PPContext.h
+tut08_ast.o: tut08_ast.cpp PPContext.h
+tut07_sema.o: tut07_sema.cpp PPContext.h
+tut06_sema.o: tut06_sema.cpp PPContext.h
+tut05_parse.o: tut05_parse.cpp PPContext.h
+tut04_parse.o: tut04_parse.cpp PPContext.h
+tut03_pp.o: tut03_pp.cpp PPContext.h
+tut02_pp.o: tut02_pp.cpp PPContext.h
 tut01_pp.o: tut01_pp.cpp
 
