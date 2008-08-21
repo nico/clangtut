@@ -1,0 +1,10 @@
+pre {
+  border: 1px solid #cccccc;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+}
+
+code {
+  background-color: #f6f6f6;
+}
+

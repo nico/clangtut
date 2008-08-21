@@ -62,7 +62,11 @@ test: all
 # XXX: SmartyPants also converts "" in program code; it shouldn't
 html: tut.markdown
 	echo '<!DOCTYPE html>' > tut.html
-	echo '<html><head><title>clang tutorial</title></head><body>' >> tut.html
+	echo '<html><head>' >> tut.html
+	echo '<meta charset="UTF-8"><title>clang tutorial</title>' >> tut.html
+	echo '<link rel="stylesheet" href="tut.css" type="text/css">' >> tut.html
+	#echo '<style type="text/css" src="tut.css"></style>' >> tut.html
+	echo '</head><body>' >> tut.html
 	Markdown.pl tut.markdown | SmartyPants.pl >> tut.html
 	echo '</body></html>' >> tut.html
 
