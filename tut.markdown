@@ -61,7 +61,9 @@ Need to compile with `-fno-rtti`, because clang is compiled that way, too. Else,
 
 when linking.
 
-See `tut01_pp.cpp`
+See [`tut01_pp.cpp`][tut01]
+
+[tut01]: tut01_pp.cpp
 
 Tutorial 02: Processing a file
 ---
@@ -105,6 +107,13 @@ With some effort, it is possible to turn this into a "real" preprocessor. See
 `Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
 done.
 
+See [`tut02_pp.cpp`][tut02], [`PPContext.h`][ppc], [`input01.c`][in1]
+
+[tut02]: tut02_pp.cpp
+[ppc]: PPContext.h
+[in1]: input01.c
+
+
 Tutorial 03: Include files
 ---
 
@@ -136,6 +145,11 @@ XXX: NormalHeaderDir vs SystemHeaderDir
 
 See `tut03_pp.cpp`. This only adds system paths for now.
 
+See [`tut03_pp.cpp`][tut03], [`input03.c`][in3]
+
+[tut03]: tut03_pp.cpp
+[in3]: input03.c
+
 Tutorial 04: Parsing the file
 ---
 
@@ -145,6 +159,10 @@ parses that token stream into an AST. Luckily, clang can do this for us.
 `Action`, `MinimalAction`.
 
 Change linker flags.
+
+See [`tut04_parse.cpp`][tut04], [`input03.c`][in3]
+
+[tut04]: tut04_parse.cpp
 
 Tutorial 05: Doing something interesting
 ---
@@ -186,6 +204,11 @@ Need to change include dir type to ignore stuff from system headers.
 Note that this does not find `static`s local to functions (which are globals,
 too).
 
+See [`tut05_parse.cpp`][tut05], [`input04.c`][in4]
+
+[tut05]: tut05_parse.cpp
+[in4]: input04.c
+
 Tutorial 06: Doing semantic analysis with clang
 ---
 
@@ -217,6 +240,9 @@ Happens also for stuff in your program.
 Now with own `MyASTConsumer`. Code slightly simpler (and much more correct)
 than the former version.
 
+See [`tut06_sema.cpp`][tut06], [`input04.c`][in4]
+
+[tut06]: tut06_sema.cpp
 
 Tutorial 07: Support for real programs
 ---
@@ -230,6 +256,11 @@ Nice output ?
 Also take care of `static`s and print the name of the defining file.
 
 `TranslationUnit` contains a whole AST (i.e. all toplevel decls)
+
+See [`tut07_sema.cpp`][tut07], [`input05.c`][in5]
+
+[tut07]: tut07_sema.cpp
+[in5]: input05.c
 
 Tutorial 08: Working with the AST
 ---
@@ -254,6 +285,11 @@ only prints uses in functions, that omits some uses (e.g. as initializers of
 other globals)
 
 LogicalLineNumber works with macro expansion, LineNumber does not.
+
+See [`tut08_ast.cpp`][tut08], [`input06.c`][in6]
+
+[tut08]: tut08_ast.cpp
+[in6]: input06.c
 
 Tutorial 09: Tracking globals across files
 ---
@@ -318,6 +354,13 @@ Careful: Need to collect globals on the rhs of toplevel inits, too (XXX).
 
 What about multiple declarations (e.g. `gui`)?
 
+See [`tut09_ast.cpp`][tut09], [`input07_1.c`][in7_1], [`input07_2.c`][in7_2],
+and [`input07.h`][in7h].
+
+[tut09]: tut09_ast.cpp
+[in7h]: input07.h
+[in7_1]: input07_1.c
+[in7_2]: input07_2.c
 
 ideas
 ---
@@ -343,4 +386,4 @@ questions
              `addIncludePath`, pp construction (inter alia header search),
              perhaps standard options (-D, -I, ?)
 
- vim:set tw=78:
+ <!--vim:set tw=78:-->

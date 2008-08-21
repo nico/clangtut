@@ -59,10 +59,11 @@ test: all
 	./tut09 -o input07.html input07_1.o input07_2.o
 	cat input07.html
 
+# XXX: SmartyPants also converts "" in program code; it shouldn't
 html: tut.markdown
 	echo '<!DOCTYPE html>' > tut.html
 	echo '<html><head><title>clang tutorial</title></head><body>' >> tut.html
-	Markdown.pl tut.markdown >> tut.html
+	Markdown.pl tut.markdown | SmartyPants.pl >> tut.html
 	echo '</body></html>' >> tut.html
 
 tut09_ast.o: tut09_ast.cpp PPContext.h
