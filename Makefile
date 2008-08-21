@@ -59,6 +59,12 @@ test: all
 	./tut09 -o input07.html input07_1.o input07_2.o
 	cat input07.html
 
+html: tut.markdown
+	echo '<!DOCTYPE html>' > tut.html
+	echo '<html><head><title>clang tutorial</title></head><body>' >> tut.html
+	Markdown.pl tut.markdown >> tut.html
+	echo '</body></html>' >> tut.html
+
 tut09_ast.o: tut09_ast.cpp PPContext.h
 tut08_ast.o: tut08_ast.cpp PPContext.h
 tut07_sema.o: tut07_sema.cpp PPContext.h
