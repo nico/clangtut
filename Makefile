@@ -70,6 +70,11 @@ html: tut.markdown
 	Markdown.pl tut.markdown | SmartyPants.pl >> tut.html
 	echo '</body></html>' >> tut.html
 
+upload: test html
+	rm -rf clangtut
+	mkdir clangtut
+	cp tut*.cpp PPContext.h input*.c input*.h input07.html tut.html tut.css Makefile clangtut
+
 tut09_ast.o: tut09_ast.cpp PPContext.h
 tut08_ast.o: tut08_ast.cpp PPContext.h
 tut07_sema.o: tut07_sema.cpp PPContext.h

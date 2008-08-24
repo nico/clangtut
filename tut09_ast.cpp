@@ -242,6 +242,8 @@ void addIncludesAndDefines(PPContext& c) {/*{{{*/
     init.AddPath(I_dirs[i], InitHeaderSearch::Angled, false, true, false);
     //addIncludePath(dirs, I_dirs[i], DirectoryLookup::SystemHeaderDir, c.fm);
   }
+  init.AddDefaultSystemIncludePaths(c.opts);
+  init.Realize();
 
   // Add defines passed in through parameters
   vector<char> predefineBuffer;
@@ -457,7 +459,17 @@ bool link(ostream& out, const vector<string>& files)
             && allUses[i].usingTU == allUses[tuStart].usingTU
             && allUses[i].usingFunction == allUses[funcStart].usingFunction) {
           Use& u = allUses[i];
-          tmr << "  " << u.usingLineNr << ": " << html::EscapeText(u.line)
+
+
+          bool mvimLinks = true;
+          tmr << "  ";
+          if (mvimLinks)
+            tmr << "<a href=\"mvim://open?line=" << u.usingLineNr
+                << "&url=" << allUses[tuStart].usingTU << "\">";
+          tmr << u.usingLineNr;
+          if (mvimLinks)
+            tmr << "</a>";
+          tmr << ": " << html::EscapeText(u.line)
               << endl;
           ++i;
         }
