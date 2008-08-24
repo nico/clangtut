@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <cctype>
+#include <unistd.h>  // getcwd()
 using namespace std;
 
 #include "clang/Sema/ParseAST.h"
@@ -462,10 +463,12 @@ bool link(ostream& out, const vector<string>& files)
 
 
           bool mvimLinks = true;
+          char buff[2048];
           tmr << "  ";
           if (mvimLinks)
             tmr << "<a href=\"mvim://open?line=" << u.usingLineNr
-                << "&url=" << allUses[tuStart].usingTU << "\">";
+                << "&url=file://" << getcwd(buff, 2048)
+                << '/' << allUses[tuStart].usingTU << "\">";
           tmr << u.usingLineNr;
           if (mvimLinks)
             tmr << "</a>";
