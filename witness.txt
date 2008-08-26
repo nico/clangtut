@@ -1620,6 +1620,9 @@ cat input07.html
 <title>Global variables</title>
 
 <style type="text/css">
+body {
+  font-family: Utopia, Georgia, Times, serif;
+}
 .global {
   background-color: #f6f6f6;
   border: 1px solid #cccccc;

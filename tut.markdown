@@ -1,6 +1,10 @@
 How to parse C programs with clang
 ===
 
+<p class="by">written by <a href="mailto:nicolasweber@gmx.de">Nicolas
+Weber</a></p>
+
+
 Introduction
 ---
 
@@ -17,12 +21,25 @@ clang does not have a stable API, so this tutorial might not be completely
 up-to-date. The last time I checked that all programs work was
 **Aug 26, 2008**.
 
+[Demo](input07.html)
+
+
 Prereq
 ---
 
 Checking out, building (graphviz support!), 
 
-add /Applications/Graphviz.app/Contents/MacOS/ to path, config llvm
+    svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
+    cd llvm
+    PATH=$PATH:/Applications/Graphviz.app/Contents/MacOS ./configure
+    make -j2
+
+    cd tools
+    svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
+    cd clang
+    make -j2
+    
+[More information](http://clang.llvm.org/get_started.html).
 
 Tutorial 01: The bare minimum
 ---

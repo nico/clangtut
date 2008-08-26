@@ -63,7 +63,7 @@ runtest: all
 	cat input07.html
 
 # XXX: SmartyPants also converts "" in program code; it shouldn't
-html: tut.markdown
+html: tut.markdown tut.css
 	echo '<!DOCTYPE html>' > tut.html
 	echo '<html><head>' >> tut.html
 	echo '<meta charset="UTF-8"><title>clang tutorial</title>' >> tut.html
@@ -72,13 +72,17 @@ html: tut.markdown
 	echo '</head><body><div class="page">' >> tut.html
 	python linkify.py tut.markdown | Markdown.pl | SmartyPants.pl >> tut.html
 	echo '</div></body></html>' >> tut.html
+
+viewhtml: html
 	open -a Safari tut.html
 
-upload: test html
+deploy: test html
 	rm -rf clangtut
 	mkdir clangtut
 	cp tut*.cpp PPContext.h input*.c input*.h input07.html tut.html tut.css Makefile linkify.py witness.txt clangtut
 	zip -R clangtut/clangtut.zip clangtut/*
+
+upload: deploy
 	# My server does not support ssh (hence, no rsync) -- use Transmit :-/
 	osascript upload.scpt
 
