@@ -66,9 +66,10 @@ html: tut.markdown
 	echo '<meta charset="UTF-8"><title>clang tutorial</title>' >> tut.html
 	echo '<link rel="stylesheet" href="tut.css" type="text/css">' >> tut.html
 	#echo '<style type="text/css" src="tut.css"></style>' >> tut.html
-	echo '</head><body>' >> tut.html
+	echo '</head><body><div class="page">' >> tut.html
 	Markdown.pl tut.markdown | SmartyPants.pl >> tut.html
-	echo '</body></html>' >> tut.html
+	echo '</div></body></html>' >> tut.html
+	open -a Safari tut.html
 
 upload: test html
 	rm -rf clangtut
