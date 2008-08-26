@@ -45,7 +45,10 @@ tut02: tut02_pp.o
 tut01: tut01_pp.o
 	g++ $(LDFLAGS) -o tut01 tut01_pp.o
 
-test: all
+test:
+	make runtest 2>&1 | cmp witness.txt -
+
+runtest: all
 	./tut01
 	./tut02 input01.c
 	./tut03 input03.c
