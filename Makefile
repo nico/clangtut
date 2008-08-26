@@ -67,14 +67,14 @@ html: tut.markdown
 	echo '<link rel="stylesheet" href="tut.css" type="text/css">' >> tut.html
 	#echo '<style type="text/css" src="tut.css"></style>' >> tut.html
 	echo '</head><body><div class="page">' >> tut.html
-	Markdown.pl tut.markdown | SmartyPants.pl >> tut.html
+	python linkify.py tut.markdown | Markdown.pl | SmartyPants.pl >> tut.html
 	echo '</div></body></html>' >> tut.html
 	open -a Safari tut.html
 
 upload: test html
 	rm -rf clangtut
 	mkdir clangtut
-	cp tut*.cpp PPContext.h input*.c input*.h input07.html tut.html tut.css Makefile clangtut
+	cp tut*.cpp PPContext.h input*.c input*.h input07.html tut.html tut.css Makefile linkify.py clangtut
 
 tut09_ast.o: tut09_ast.cpp PPContext.h
 tut08_ast.o: tut08_ast.cpp PPContext.h

@@ -10,12 +10,14 @@ body {
 .page {
   text-align: left;
   line-height: 170%;
-  width: 850px;
-  margin: 25px auto; /* centers .page everywhere else */
+  width: 826px;
+  margin: 0px auto; /* centers .page everywhere else */
   background-color: white;
-  padding: 20px;
+  padding: 12px;
   -moz-border-radius: 14px;
   -webkit-border-radius: 14px;
+  margin-top: 55px;
+  margin-bottom: 40px;
 }
 pre {
   padding: 5px;
@@ -25,12 +27,16 @@ pre {
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
 }
-
+p {
+    margin: 0px 40px 0px 0px;
+    padding: 10px;
+}
 code {
   background-color: #f6f6f6;
 }
 h1 {
   font-size: 2.2em;
+  border-bottom: solid 2px #aaa;
 }
 h2 {
   border-bottom: solid 1px #BBB;

@@ -61,9 +61,7 @@ Need to compile with `-fno-rtti`, because clang is compiled that way, too. Else,
 
 when linking.
 
-See [`tut01_pp.cpp`][tut01]
-
-[tut01]: tut01_pp.cpp
+See `tut01_pp.cpp`
 
 Tutorial 02: Processing a file
 ---
@@ -107,11 +105,8 @@ With some effort, it is possible to turn this into a "real" preprocessor. See
 `Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
 done.
 
-See [`tut02_pp.cpp`][tut02], [`PPContext.h`][ppc], [`input01.c`][in1]
+See `tut02_pp.cpp`, `PPContext.h`, `input01.c`
 
-[tut02]: tut02_pp.cpp
-[ppc]: PPContext.h
-[in1]: input01.c
 
 
 Tutorial 03: Include files
@@ -143,12 +138,7 @@ Frameworks are special, they are looked into. Needs to be set e.g. for
 
 XXX: NormalHeaderDir vs SystemHeaderDir
 
-See `tut03_pp.cpp`. This only adds system paths for now.
-
-See [`tut03_pp.cpp`][tut03], [`input03.c`][in3]
-
-[tut03]: tut03_pp.cpp
-[in3]: input03.c
+See `tut03_pp.cpp`, `input03.c`. This only adds system paths for now.
 
 Tutorial 04: Parsing the file
 ---
@@ -160,9 +150,7 @@ parses that token stream into an AST. Luckily, clang can do this for us.
 
 Change linker flags.
 
-See [`tut04_parse.cpp`][tut04], [`input03.c`][in3]
-
-[tut04]: tut04_parse.cpp
+See `tut04_parse.cpp`, `input03.c`
 
 Tutorial 05: Doing something interesting
 ---
