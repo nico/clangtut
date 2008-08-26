@@ -20,16 +20,16 @@ body {
   margin-bottom: 40px;
 }
 pre {
-  padding: 5px;
-  margin: 0px;
+  padding: 15px;
+  margin: 0px 60px 0px 20px; /* t r b l */
   background-color: #f6f6f6;
   border: 1px solid #cccccc;
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
 }
 p {
-    margin: 0px 40px 0px 0px;
-    padding: 10px;
+  padding: 10px;
+  margin: 0px 40px 0px 0px;
 }
 code {
   background-color: #f6f6f6;
@@ -49,4 +49,10 @@ h3 {
   line-height: 120%;
   margin: 18px 5px 8px 5px;
   border-bottom: solid 1px #CCC;
+}
+blockquote {
+  border-left: solid 5px #CCC;
+  padding-left: 10px;
+  margin-left: 10px;
+  margin-right: 0px;
 }
