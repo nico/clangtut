@@ -78,6 +78,9 @@ upload: test html
 	rm -rf clangtut
 	mkdir clangtut
 	cp tut*.cpp PPContext.h input*.c input*.h input07.html tut.html tut.css Makefile linkify.py witness.txt clangtut
+	zip -R clangtut/clangtut.zip clangtut/*
+	# My server does not support ssh (hence, no rsync) -- use Transmit :-/
+	osascript upload.scpt
 
 tut09_ast.o: tut09_ast.cpp PPContext.h
 tut08_ast.o: tut08_ast.cpp PPContext.h

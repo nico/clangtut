@@ -1,6 +1,9 @@
 How to parse C programs with clang
 ===
 
+Introduction
+---
+
 checkout and build llvm and clang.
 
 See llvm-svn/tools/clang/docs/InternalsManual.html for a very rough overview.
@@ -12,7 +15,7 @@ See llvm-svn/tools/clang/docs/InternalsManual.html for a very rough overview.
 
 clang does not have a stable API, so this tutorial might not be completely
 up-to-date. The last time I checked that all programs work was
-**Jul 22, 2008**.
+**Aug 26, 2008**.
 
 Prereq
 ---
@@ -373,5 +376,12 @@ questions
 * libDriver: `DefineBuiltinMacro`, `DeclPrinter`,
              `addIncludePath`, pp construction (inter alia header search),
              perhaps standard options (-D, -I, ?)
+
+
+Download
+---
+
+You can download this tutorial along with all sources, the Makefile, etc as
+a [zip file](clangtut.zip).
 
  <!--vim:set tw=78:-->
