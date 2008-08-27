@@ -4,7 +4,7 @@ import sys
 
 # linkify all cpp files that can be wrapped in ``, but don't linkify if they
 # are wrapped in []. Also, don't linkify anything directly following a :
-r = re.compile(r'(?<!\[|`)`?\b(\w+\.(?:cpp|c|h))\b`?')
+r = re.compile(r'(?<!\[|`|\()`?\b(\w+\.(?:cpp|c|h))\b`?')
 ignore = re.compile(r'^\[[^\]]+\]:')
 
 def linkify(line):
@@ -24,6 +24,8 @@ assert linkify('[`bla.cpp`]') == '[`bla.cpp`]'
 assert linkify('[bla.cpp]') == '[bla.cpp]'
 assert linkify('a.cpp and b.cpp') == '[`a.cpp`](a.cpp) and [`b.cpp`](b.cpp)'
 assert linkify('[tut05]: tut05_parse.cpp') == '[tut05]: tut05_parse.cpp'
+#assert linkify('(file.c)') == '([`file.c`](file.c))'  # TODO
+assert linkify('[this](file.c)') == '[this](file.c)'
 
 for line in fileinput.input():
    sys.stdout.write(linkify(line))

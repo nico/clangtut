@@ -28,13 +28,14 @@ practice, it's a bit harder for [some codebases][cscout-paper]).
 
 Front-ends have existed for decades. So, what's special about clang? I think
 the most interesting part is that clang uses a library design, which means
-that youc an easily embed clang into your own programs. This tutorial tells
-you how you do this.
+that youc an easily embed clang into your own programs (and by "easily", I
+mean it. Most programs in this tutorial are well below 50 lines). This
+tutorial tells you how you do this.
 
 So, do you have a large C code-base and want to create [automated non-trivial
 refactorings][gtk-refactor]? Would you like to have a [ctags][] that works
 better with C++ and at all with Objective-C? Would you like to collect some
-statistics about your program, and you feel that `grep` doesn't cut it? THen
+statistics about your program, and you feel that `grep` doesn't cut it? Then
 clang is for you.
 
 This tutorials will offer a tour through clang's preprocessor, parser, and AST
@@ -43,19 +44,29 @@ globals defined and used in a program. For [these](input07.h)
 [input](input07_1.c) [files](input07_2.c), this [output](input07.html) will be
 generated. The final program is close to production quality: It is for example
 able to process the source code of [vim](http://vim.org) -- the resulting html
-file is 2.4 mb! (vim uses lots of globals.)
+file is 2.4 mb! (vim uses lots of globals.) Furthermore, the program can be
+used with any make-based program out of the box -- not change to Makefiles or
+input file lists required.
 
 A short word of warning: clang is still work in prograss. C++-support is not
 yet anywhere near completion, and clang does not have a stable API, so this
 tutorial might not be completely up-to-date. The last time I checked that all
 programs work was **Aug 26, 2008**.
 
+Clang works on all platforms. In this tutorial I assume that you have some
+Unix-based platform, but in principle everything should work on Windows, too.
+
+[clang]: http://clang.llvm.org
+[llvm]: http://llvm.org
+[cscout-paper]: XXX
+[gtk-refactor]: XXX
+
 
 Getting started
 ---
 
-
-Checking out, building (graphviz support!), 
+There is no official release of clang yet, you have to get it from SVN and
+build it for yourself. Luckily, this is easy:
 
     svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
     cd llvm
@@ -66,46 +77,93 @@ Checking out, building (graphviz support!),
     svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
     cd clang
     make -j2
-    
-[More information](http://clang.llvm.org/get_started.html).
 
-See llvm-svn/tools/clang/docs/InternalsManual.html for a very rough overview.
+If you call `./configure` without [graphviz][] in your `PATH`, that's fine
+too. You'll be missing some visualization functionality, but we won't use that
+in this tutorial anyway.
+
+Note that this does a debug build of llvm and clang. The resulting libraries
+and binaries will end up in `llvm/Debug` and are a lot slower than the release
+binaries (which you get when running `./configure --enable-optimized`).
+    
+You can find more information in clang's [official getting started
+guide](http://clang.llvm.org/get_started.html).
+
+<!--
+XXX
 
 * Preprocessor
 * Lexer
 * Parser
 * Actions: Sema, diagnostics
 
-Tutorial 01: The bare minimum
----
-
-Let's try to create `Preprocessor` object. Remember, this is how you
-communicate with the lexer. Our first program will not do anything useful,
-it only constructs a `Preprocessor` and exits again.
-
 (XXX: it's possible to directly create a lexer as well; see `HTMLRewrite.cpp`.
 This is for example useful in raw mode. Perhaps have a "Tut 0" that does
 syntax highlighting only?)
+-->
 
-The constructor takes no less than 5 arguments: A `Diagnostic` object, a
-`LangOptions` object, a `TargetInfo` object, a `SourceManager` object, and
-finally a `HeaderSearch` object. Let's break down what those objects are good
-for, and how we can build them.
+Tutorial 01: The bare minimum
+---
 
-First is `Diagnostic`. This is XXX. To build a `Diagnostic` object, we need a
-`DiagnosticClient`. `DummyDiagnosticClient`.
+A front-end consists of multiple parts. First is usually a lexer, which
+converts the input from a stream of characters to a stream of tokens. For
+example, the input `while` is converted from the five characters 'w', 'h',
+'i', 'l', and 'e' to the token `kw_while`. For performance reasons, clang does
+not have a separate preprocessor program, but does preprocessing while lexing.
 
-Next up is `LangOptions`. This is easy, as its constructor does not take any
-parameters.
+The `Preprocessor` class is the main interface to the lexer, and it's a class
+you will need in almost every program that embeds clang. So, for starters, 
+let's try to create `Preprocessor` object. Our first program will not do
+anything useful, it only constructs a `Preprocessor` and exits again.
+
+The constructor of `Preprocessor` takes no less than 5 arguments: A
+`Diagnostic` object, a `LangOptions` object, a `TargetInfo` object, a
+`SourceManager` object, and finally a `HeaderSearch` object. Let's break down
+what those objects are good for, and how we can build them.
+
+First is `Diagnostic`. This is used by clang to report errors and warnings to
+the user. A `Diagnostic` object can have a `DiagnosticClient`, which is
+responsible for actually displaying the messages to the user. We will use
+clang's built-in `TextDiagnostics` class, which writes errors and warnings to
+the console (it's the same `DiagnosticClient` that is used by the `clang`
+binary).
+
+Next up is `LangOptions`. This class lets you configure if you're compiling C
+or C++, and which language extensions you want to allow. Constructing this
+object is easy, as its constructor does not take any parameters.
 
 The `TargetInfo` is easy, too, but we need to call a factory method as the
-constructor is private. Required so that the preprocessor can add
-target-specific defines, for example `__APPLE__`.  Need to delete this at the
-end of the program.
+constructor is private. The factory method takes a "host triple" (XXX: link?)
+as parameter, such as "i386-apple-darwin". We will pass `LLVM_HOST_TRIPLE`,
+which contains the host triple describing the machine llvm was compiled on.
+But in principle, you can use clang as a [cross-compiler][] very easily, too.
+The `TargetInfo` object is required so that the preprocessor can add
+target-specific defines, for example `__APPLE__`. You need to delete this
+object at the end of the program.
 
-`SourceManager`.
+`SourceManager` is used by clang to load and cache source files. Again, its
+constructor takes no arguments.
 
-Finally, `HeaderSearch` requires a `FileManager`. Good for XXX.
+Finally, the constructor of `HeaderSearch` requires a `FileManager`.
+`HeaderSearch` configures where clang looks for include files.
+
+So, to build a `Preprocessor` object, the following code is required:
+
+    TextDiagnostics diagClient;
+    Diagnostic diags(&diagClient);
+    LangOptions opts;
+    TargetInfo* target = TargetInfo::CreateTargetInfo(LLVM_HOST_TRIPLE);
+    SourceManager sm;
+    FileManager fm;
+    HeaderSearch headers(fm);
+    Preprocessor pp(diags, opts, *target, sm, headers);
+    // ...
+    delete target;
+
+Because we will need a `Preprocessor` object in all tutorials, I've moved this
+initialization code to its own file, `PPContext.h`. With this file,
+`tut01_pp.cpp` is quite short (take your time and take a look at that two
+files).
 
 Need to compile with `-fno-rtti`, because clang is compiled that way, too. Else,
 
@@ -419,6 +477,8 @@ the `Action` interface, several ast consumers can be used, etc.
 
 codegen uses a visitor
 
+analysis lib is cool and wasn't covered at all.
+
 
 questions
 ---
@@ -435,8 +495,5 @@ Download
 
 You can download this tutorial along with all sources, the Makefile, etc as
 a [zip file](clangtut.zip).
-
-clang: http://clang.llvm.org
-llvm: http://llvm.org
 
  <!--vim:set tw=78:-->
