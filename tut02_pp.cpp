@@ -30,5 +30,5 @@ int main(int argc, char* argv[])
     context.pp.Lex(Tok);
     context.pp.DumpToken(Tok);
     cerr << endl;
-  } while (Tok.isNot(tok::eof));
+  } while (Tok.isNot(tok::eof) && !context.diags.hasErrorOccurred());
 }

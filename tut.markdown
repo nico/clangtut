@@ -204,79 +204,139 @@ Sure enough, It doesn't do anything yet. Let's tackle this next.
 Tutorial 02: Processing a file
 ---
 
-Right now, the program is not very interesting. It does not do anything yet.
-We want to change the program so that it feeds C files into the preprocessor
-object.
+Right now, out program is not very interesting, as it does not do anything yet.
+We want to change it so that it feeds C files into the preprocessor object. To
+add an input file to the preprocessor, we call:
 
-    pp.EnterSourceFile(sm.createFileID(File, SourceLocation()), 0);
-
-Instead:
-
-    sm.createMainFileID(File, SourceLocation());
+    const FileEntry* file = fm.getFile("filename.c");
+    sm.createMainFileID(file, SourceLocation());
     pp.EnterMainSourceFile();
 
+This creates a file id for the input file and stores it as the "main file" in
+the `SourceManager` object. The second line tells the preprocessor to enter
+the `SourceManager`'s main file into its file list; the call does some other
+setup stuff (such as creating a buffer with predefines), too.
 
-Parse loop:
+Now that a source file is added, we can ask the preprocessor to preprocess it
+and read the preprocessed input tokens:
 
     Token Tok;
     do {
-      pp.Lex(Tok);
-      pp.DumpToken(Tok);
+      pp.Lex(Tok);  // read one token
+      pp.DumpToken(Tok);  // outputs to cerr
       cerr << endl;
-    } while (Tok.isNot(tok::eof));
+    } while (Tok.isNot(tok::eof) && !diags.hasErrorOccurred());
 
-See `tut02_pp.cpp`. This is a very complete preprocessor, it handles all kinds
-of corner cases correclty already. It also strips comments. Play around with
-it a bit:
+See `tut02_pp.cpp` for the complete program. Note that this is a very complete
+preprocessor, it handles all kinds of corner cases correclty already. It also
+strips comments. The program can be compiled exactly like `tut01`.
 
-    XXX cat input01.c, show output
+After building, play around with it a bit. For example, here's the output if
+`input01.c` is given as an input file:
 
-However, invalid input does not yet produce any error messages. That's because
-our `DummyDiagnosticClient` does not yet produce any output. Let's change
-this:
+    $ ./tut02 input01.c 
+    typedef 'typedef'
+    char 'char'
+    star '*'
+    identifier '__builtin_va_list'
+    semi ';'
+    int 'int'
+    identifier 'main'
+    l_paren '('
+    r_paren ')'
+    l_brace '{'
+    int 'int'
+    identifier 'a'
+    equal '='
+    numeric_constant '4'
+    plus '+'
+    numeric_constant '5'
+    semi ';'
+    int 'int'
+    identifier 'b'
+    equal '='
+    input01.c:5:13: warning: "/*" within block comment
+      /* Nested /* comments */ 12; // are handled correctly
+                ^
+    numeric_constant '12'
+    semi ';'
+    int 'int'
+    identifier 'c'
+    equal '='
+    numeric_constant '12'
+    semi ';'
+    r_brace '}'
+    eof ''
 
-    XXX
-
-XXX: incomplete. Now, we get error output.
-
-With some effort, it is possible to turn this into a "real" preprocessor. See
-`Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
-done.
-
-See `tut02_pp.cpp`, `PPContext.h`, `input01.c`
-
+Note the `typedef char* __builtin_va_list;` that gets added through the
+predefine buffer.  Also note the nicely formatted warning message
+`TextDiagnostics` gives us for free.  You can also try feeding errorneous
+programs to `tut02`. As you'll see, some errors are detected, while others are
+not (yet). For example, try `input02.c`.
 
 
 Tutorial 03: Include files
 ---
 
 If you feed something with an `#include` line into our program, chances are
-that it does not work:
+that it does not work. For example, if we feed it `input03.c`, we get an
+error:
 
-    XXX cat etc
-
-(The "%0" output is because we don't fill in the arguments from the `Strs`
-array).
+    $ ./tut02 input03.c 
+    typedef 'typedef'
+    char 'char'
+    star '*'
+    identifier '__builtin_va_list'
+    semi ';'
+    input03.c:1:10: error: 'stdio.h' file not found
+    #include <stdio.h>
+             ^
+    int 'int'
 
 We need to tell the preprocessor where it can find its header files. Where
 standard include files are stored depends on your system. On Leopard, they are
-in
-
-    XXX
+for example in `/usr/lib/gcc/i686-apple-darwin/4.0.1/include`.
 
 You add those paths via the `HeaderSearch` object. Its `SetSearchPaths()`
 method takes a list of `DirectoryLookup`s (user headers at the front, system
 headers after them), an index that specifies the first system header, and a
 flag if the current directory should be searched for include files as well.
 
-    XXX
+However, clang does luckily include a helper class that makes setting up
+search paths much easier. This helper class is called `InitHeaderSearch`. To
+add the default system header paths to clang, you use the following code:
 
-Frameworks are special, they are looked into. Needs to be set e.g. for
-`/Library/Frameworks`.
+    InitHeaderSearch init(headers);
+    init.AddDefaultSystemIncludePaths(opts);
+    init.Realize();  // this actually sends the header list to HeaderSearch
 
-XXX: NormalHeaderDir vs SystemHeaderDir
+With this tiny change, `#include` directives that include system headers do
+already work. See `tut03_pp.cpp` for the complete program.
 
-See `tut03_pp.cpp`, `input03.c`. This only adds system paths for now.
+    $ ./tut03 input03.c
+    # ... lots of output omitted
+    semi ';'
+    r_brace '}'
+    int 'int'
+    identifier 'main'
+    l_paren '('
+    r_paren ')'
+    l_brace '{'
+    identifier 'printf'
+    l_paren '('
+    string_literal '"Hello, world\n"'
+    r_paren ')'
+    semi ';'
+    r_brace '}'
+    eof ''
+
+This actually outputs all the tokens found in the included file, so the output
+is quite long.
+
+With some effort, it is possible to turn this into a "real" preprocessor. See
+`Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
+done. (XXX: link this up)
+
 
 Tutorial 04: Parsing the file
 ---
