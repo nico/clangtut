@@ -42,6 +42,7 @@ h1 {
   font-size: 2.6em;
   /*border-bottom: solid 2px #aaa;*/
   margin-bottom: 8px;
+  line-height: 120%;
   padding: 5px;
 }
 h2 {

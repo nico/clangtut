@@ -1,5 +1,7 @@
-How to parse C programs with clang
+How to parse C programs with clang: A tutorial in 9 parts
 ===
+
+
 
 <p class="by">written by <a href="mailto:nicolasweber@gmx.de">Nicolas
 Weber</a></p>
@@ -165,16 +167,35 @@ initialization code to its own file, `PPContext.h`. With this file,
 `tut01_pp.cpp` is quite short (take your time and take a look at that two
 files).
 
-Need to compile with `-fno-rtti`, because clang is compiled that way, too. Else,
+So, all that is left is to compile `tut01_pp.cpp` and you're done with part 1!
+This is how you do it:
+
+    g++ -I/Users/$USER/src/llvm/tools/clang/include \
+      `/Users/$USER/src/llvm/Debug/bin/llvm-config --cxxflags` \
+      -fno-rtti -c tut01_pp.cpp
+    g++ `/Users/$USER/src/llvm/Debug/bin/llvm-config --ldflags` \
+      -lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter \
+      -lclangBasic -lclangLex -lclangDriver \
+      -o tut01 tut01_pp.o
+
+You need to compile with `-fno-rtti`, because clang is compiled that way, too.
+Else, the linker will complain with this when linking:
 
       Undefined symbols:
         "typeinfo for clang::DiagnosticClient", referenced from:
             typeinfo for DummyDiagnosticClientin tut01_pp.o
       ld: symbol(s) not found
 
-when linking.
+Also note that you need to link quite a lot of libraries. Both clang and LLVM
+have fine-grained libraries, so that you can link in just what you need.
 
-See `tut01_pp.cpp`
+So, that's it for part 1! Now you can run your first shiny, clang-powered
+program:
+
+    ./tut01
+
+Sure enough, It doesn't do anything yet. Let's tackle this next.
+
 
 Tutorial 02: Processing a file
 ---
