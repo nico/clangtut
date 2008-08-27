@@ -8,24 +8,52 @@ Weber</a></p>
 Introduction
 ---
 
-checkout and build llvm and clang.
+From clang's [website][clang]:
 
-See llvm-svn/tools/clang/docs/InternalsManual.html for a very rough overview.
+> The goal of the Clang project is to create a new C, C++, Objective C and
+> Objective C++ front-end for the [LLVM][llvm] compiler. 
 
-* Preprocessor
-* Lexer
-* Parser
-* Actions: Sema, diagnostics
+What does that mean, and why should you care? A front-end is a  program that
+takes a piece of code and converts it from a flat string to a structured,
+tree-formed representation of the same program -- an AST.
 
-clang does not have a stable API, so this tutorial might not be completely
-up-to-date. The last time I checked that all programs work was
-**Aug 26, 2008**.
+Once you have an AST of a program, you can do many things with the program
+that are hard without an AST. For example, renaming a variable without an AST
+is hard: You cannot simply search for the old name and replace it with a new
+name, as this will change too much (for example, variables that have the old
+name but are in a different namespace, and so on). With an AST, it's easy: In
+principle, you only have to change the `name` field of the right
+`VariableDeclaration` AST node, and convert the AST back to a string. (In
+practice, it's a bit harder for [some codebases][cscout-paper]).
 
-[Demo](input07.html)
+Front-ends have existed for decades. So, what's special about clang? I think
+the most interesting part is that clang uses a library design, which means
+that youc an easily embed clang into your own programs. This tutorial tells
+you how you do this.
+
+So, do you have a large C code-base and want to create [automated non-trivial
+refactorings][gtk-refactor]? Would you like to have a [ctags][] that works
+better with C++ and at all with Objective-C? Would you like to collect some
+statistics about your program, and you feel that `grep` doesn't cut it? THen
+clang is for you.
+
+This tutorials will offer a tour through clang's preprocessor, parser, and AST
+libraries. As example, we will write a program that collects a list of all
+globals defined and used in a program. For [these](input07.h)
+[input](input07_1.c) [files](input07_2.c), this [output](input07.html) will be
+generated. The final program is close to production quality: It is for example
+able to process the source code of [vim](http://vim.org) -- the resulting html
+file is 2.4 mb! (vim uses lots of globals.)
+
+A short word of warning: clang is still work in prograss. C++-support is not
+yet anywhere near completion, and clang does not have a stable API, so this
+tutorial might not be completely up-to-date. The last time I checked that all
+programs work was **Aug 26, 2008**.
 
 
-Prereq
+Getting started
 ---
+
 
 Checking out, building (graphviz support!), 
 
@@ -40,6 +68,13 @@ Checking out, building (graphviz support!),
     make -j2
     
 [More information](http://clang.llvm.org/get_started.html).
+
+See llvm-svn/tools/clang/docs/InternalsManual.html for a very rough overview.
+
+* Preprocessor
+* Lexer
+* Parser
+* Actions: Sema, diagnostics
 
 Tutorial 01: The bare minimum
 ---
@@ -400,5 +435,8 @@ Download
 
 You can download this tutorial along with all sources, the Makefile, etc as
 a [zip file](clangtut.zip).
+
+clang: http://clang.llvm.org
+llvm: http://llvm.org
 
  <!--vim:set tw=78:-->
