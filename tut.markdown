@@ -60,8 +60,8 @@ Unix-based platform, but in principle everything should work on Windows, too.
 
 [clang]: http://clang.llvm.org
 [llvm]: http://llvm.org
-[cscout-paper]: XXX
-[gtk-refactor]: XXX
+[cscout-paper]: http://www.spinellis.gr/pubs/jrnl/2003-TSE-Refactor/html/Spi03r.html
+[gtk-refactor]: http://people.imendio.com/richard/gtk-rewriter/
 
 
 Getting started
@@ -90,6 +90,8 @@ binaries (which you get when running `./configure --enable-optimized`).
     
 You can find more information in clang's [official getting started
 guide](http://clang.llvm.org/get_started.html).
+
+[Browse clang source](https://llvm.org/svn/llvm-project/cfe/trunk/).
 
 <!--
 XXX
@@ -135,13 +137,13 @@ or C++, and which language extensions you want to allow. Constructing this
 object is easy, as its constructor does not take any parameters.
 
 The `TargetInfo` is easy, too, but we need to call a factory method as the
-constructor is private. The factory method takes a "host triple" (XXX: link?)
-as parameter, such as "i386-apple-darwin". We will pass `LLVM_HOST_TRIPLE`,
-which contains the host triple describing the machine llvm was compiled on.
-But in principle, you can use clang as a [cross-compiler][] very easily, too.
-The `TargetInfo` object is required so that the preprocessor can add
-target-specific defines, for example `__APPLE__`. You need to delete this
-object at the end of the program.
+constructor is private. The factory method takes a "host triple" as parameter
+that defines the architecture clang should compile for, such as
+"i386-apple-darwin". We will pass `LLVM_HOST_TRIPLE`, which contains the host
+triple describing the machine llvm was compiled on.  But in principle, you can
+use clang as a [cross-compiler][] very easily, too.  The `TargetInfo` object
+is required so that the preprocessor can add target-specific defines, for
+example `__APPLE__`. You need to delete this object at the end of the program.
 
 `SourceManager` is used by clang to load and cache source files. Again, its
 constructor takes no arguments.
@@ -195,6 +197,8 @@ program:
     ./tut01
 
 Sure enough, It doesn't do anything yet. Let's tackle this next.
+
+[cross-compiler]: http://en.wikipedia.org/wiki/Cross_compile
 
 
 Tutorial 02: Processing a file
