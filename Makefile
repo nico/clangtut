@@ -70,7 +70,7 @@ html: tut.markdown tut.css
 	echo '<link rel="stylesheet" href="tut.css" type="text/css">' >> tut.html
 	#echo '<style type="text/css" src="tut.css"></style>' >> tut.html
 	echo '</head><body><div class="page">' >> tut.html
-	python linkify.py tut.markdown | Markdown.pl | SmartyPants.pl >> tut.html
+	python linkify.py tut.markdown | Markdown.pl --html4tags | SmartyPants.pl >> tut.html
 	echo '</div></body></html>' >> tut.html
 
 viewhtml: html

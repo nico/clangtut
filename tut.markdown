@@ -7,9 +7,6 @@ How to parse C programs with clang: A tutorial in 9 parts
 Weber</a></p>
 
 
-XXX: script that can parse `EXEC: cmd` lines, then use this for program
-output, code excerpts, etc
-
 Introduction
 ---
 
@@ -421,10 +418,6 @@ your own subclass of `MinimalAction`.
 `DeclTy` etc are abstract in parser. It calls method on the `Action` to create
 them and then passes them again to the action object.
 
-
-`ActOnDeclarator()` (then mayhaps `AddInitializerToDecl`, then
-`FinalizeDeclaratorGroup`. example with several decls in one line).
-
 A declaration has very roughly two parts: the declared type on the left and a
 list of "modifiers" on the right. Left is a `DeclSpec`, right is a list of
 `DeclaratorChunk`s.
@@ -448,10 +441,6 @@ will have the following `DeclaratorChunk`s:
     Pointer
     Arr
     Pointer
-
-`DeclSpec` itself stores storage specifiers, type, etc.
-
-Need to change include dir type to ignore stuff from system headers.
 
 Note that this does not find `static`s local to functions (which are globals,
 too).
@@ -491,9 +480,8 @@ Happens also for stuff in your program.
 Now with own `MyASTConsumer`. Code slightly simpler (and much more correct)
 than the former version.
 
-See [`tut06_sema.cpp`][tut06], [`input04.c`][in4]
+See `tut06_sema.cpp`, `input04.c`
 
-[tut06]: tut06_sema.cpp
 
 Tutorial 07: Support for real programs
 ---
@@ -508,10 +496,8 @@ Also take care of `static`s and print the name of the defining file.
 
 `TranslationUnit` contains a whole AST (i.e. all toplevel decls)
 
-See [`tut07_sema.cpp`][tut07], [`input05.c`][in5]
+See `tut07_sema.cpp`, `input05.c`
 
-[tut07]: tut07_sema.cpp
-[in5]: input05.c
 
 Tutorial 08: Working with the AST
 ---
@@ -537,10 +523,8 @@ other globals)
 
 LogicalLineNumber works with macro expansion, LineNumber does not.
 
-See [`tut08_ast.cpp`][tut08], [`input06.c`][in6]
+See `tut08_ast.cpp`, `input06.c`
 
-[tut08]: tut08_ast.cpp
-[in6]: input06.c
 
 Tutorial 09: Tracking globals across files
 ---
@@ -605,13 +589,8 @@ Careful: Need to collect globals on the rhs of toplevel inits, too (XXX).
 
 What about multiple declarations (e.g. `gui`)?
 
-See [`tut09_ast.cpp`][tut09], [`input07_1.c`][in7_1], [`input07_2.c`][in7_2],
-and [`input07.h`][in7h].
+See `tut09_ast.cpp`, `input07_1.c`, `input07_2.c`, and `input07.h`.
 
-[tut09]: tut09_ast.cpp
-[in7h]: input07.h
-[in7_1]: input07_1.c
-[in7_2]: input07_2.c
 
 ideas
 ---
@@ -646,4 +625,14 @@ Download
 You can download this tutorial along with all sources, the Makefile, etc as
 a [zip file](clangtut.zip).
 
- <!--vim:set tw=78:-->
+
+TODO
+---
+
+XXX: script that can parse `EXEC: cmd` lines, then use this for program
+output, code excerpts, etc
+
+XXX: use markdown-python with highlight-code extensions (which uses pygments)
+
+
+ <!--vim:set tw=78 ft=markdown:-->
