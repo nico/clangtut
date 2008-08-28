@@ -21,6 +21,12 @@ public:
     // global variables and global functions is Hard in C, so this
     // is only an approximation.
 
+    for (int i = 0; i < D.getNumTypeObjects(); ++i) {
+      DeclaratorChunk c = D.getTypeObject(i);
+      const char* kinds[] = { "Pointer", "Ref", "Arr", "Fn" };
+      cerr << kinds[c.Kind] << endl;
+    } cerr << endl;
+
     // Only global declarations...
     if (D.getContext() == Declarator::FileContext) {
       IdentifierInfo *II = D.getIdentifier();
@@ -31,9 +37,7 @@ public:
           && DS.getStorageClassSpec() != DeclSpec::SCS_typedef) {
 
         // ...and no functions...
-        if (D.getNumTypeObjects() == 0 ||
-            D.getTypeObject(D.getNumTypeObjects() - 1).Kind
-              != DeclaratorChunk::Function) {
+        if (!D.isFunctionDeclarator()) {
 
           SourceLocation loc = DS.getTypeSpecTypeLoc();
           // ...and in a user header

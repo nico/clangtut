@@ -7,6 +7,9 @@ How to parse C programs with clang: A tutorial in 9 parts
 Weber</a></p>
 
 
+XXX: script that can parse `EXEC: cmd` lines, then use this for program
+output, code excerpts, etc
+
 Introduction
 ---
 
@@ -92,7 +95,7 @@ binaries (which you get when running `./configure --enable-optimized`).
 You can find more information in clang's [official getting started
 guide](http://clang.llvm.org/get_started.html).
 
-[Browse clang source](https://llvm.org/svn/llvm-project/cfe/trunk/).
+XXX: [Browse clang source](https://llvm.org/svn/llvm-project/cfe/trunk/).
 
 <!--
 XXX
@@ -226,9 +229,11 @@ and read the preprocessed input tokens:
     Token Tok;
     do {
       pp.Lex(Tok);  // read one token
+      if (context.diags.hasErrorOccurred())  // stop lexing/pp on error
+        break;
       pp.DumpToken(Tok);  // outputs to cerr
       cerr << endl;
-    } while (Tok.isNot(tok::eof) && !diags.hasErrorOccurred());
+    } while (Tok.isNot(tok::eof));
 
 See `tut02_pp.cpp` for the complete program. Note that this is a very complete
 preprocessor, it handles all kinds of corner cases correclty already. It also
@@ -294,7 +299,6 @@ error:
     input03.c:1:10: error: 'stdio.h' file not found
     #include <stdio.h>
              ^
-    int 'int'
 
 We need to tell the preprocessor where it can find its header files. Where
 standard include files are stored depends on your system. On Leopard, they are
@@ -338,7 +342,7 @@ is quite long.
 
 With some effort, it is possible to turn this into a "real" preprocessor. See
 `Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
-done. (XXX: link this up)
+done. (XXX: link clang sources to their declarations in clang's websvn)
 
 
 Tutorial 04: Parsing the file
@@ -385,13 +389,7 @@ some statistics about the program it parses (example input is `input03.c`):
     Number of memory regions: 1
     Bytes allocated: 1901
 
-
-Tutorial 05: Doing something interesting
----
-
-`DeclTy` etc are abstract in parser. It calls method on the `Action` to create
-them and then passes them again to the action object.
-
+<!--
 Actually surprisingly tricky. Eli Friedman:
 
 > Fundamentally, in C, it's impossible to
@@ -406,18 +404,50 @@ Actually surprisingly tricky. Eli Friedman:
 >     typedef int x();
 >     x z;
 >     __typeof(z) r;
+-->
+
+Tutorial 05: Doing something interesting
+---
+
+By now, we can do some actual analysis of the input code. Remember, we want to
+write a program that lists information about global variables. Finding all
+globals in a program is a good start. One possible approach is to use the
+parser for this.
+
+Every time the parser finds a declaration, the parser calls
+`ActOnDeclarator()` on the action object. Thus, we override this method in
+your own subclass of `MinimalAction`.
+
+`DeclTy` etc are abstract in parser. It calls method on the `Action` to create
+them and then passes them again to the action object.
+
 
 `ActOnDeclarator()` (then mayhaps `AddInitializerToDecl`, then
 `FinalizeDeclaratorGroup`. example with several decls in one line).
 
+A declaration has very roughly two parts: the declared type on the left and a
+list of "modifiers" on the right. Left is a `DeclSpec`, right is a list of
+`DeclaratorChunk`s.
+
 `DeclSpec` contains information about the declaration. `DeclaratorChunk`s
 store modifiers like pointer, array, reference, or function. For example,
 
-    int** (*bla[16]()[];
+    char *(*(**foo [][8])())[];
+
+> foo is array of array of 8 pointer to pointer to function returning pointer
+> to array of pointer to char
 
 will have the following `DeclaratorChunk`s:
 
-    XXX
+
+    Arr
+    Arr
+    Pointer
+    Pointer
+    Fn
+    Pointer
+    Arr
+    Pointer
 
 `DeclSpec` itself stores storage specifiers, type, etc.
 
@@ -426,10 +456,9 @@ Need to change include dir type to ignore stuff from system headers.
 Note that this does not find `static`s local to functions (which are globals,
 too).
 
-See [`tut05_parse.cpp`][tut05], [`input04.c`][in4]
+See `tut05_parse.cpp`, `input04.c`
 
-[tut05]: tut05_parse.cpp
-[in4]: input04.c
+http://eli.thegreenplace.net/2008/07/18/reading-c-type-declarations/
 
 Tutorial 06: Doing semantic analysis with clang
 ---

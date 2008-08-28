@@ -28,7 +28,9 @@ int main(int argc, char* argv[])
   Token Tok;
   do {
     context.pp.Lex(Tok);
+    if (context.diags.hasErrorOccurred())
+      break;
     context.pp.DumpToken(Tok);
     cerr << endl;
-  } while (Tok.isNot(tok::eof) && !context.diags.hasErrorOccurred());
+  } while (Tok.isNot(tok::eof));
 }
