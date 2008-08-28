@@ -47,7 +47,7 @@ globals defined and used in a program. For [these](input07.h)
 generated. The final program is close to production quality: It is for example
 able to process the source code of [vim](http://vim.org) -- the resulting html
 file is 2.4 mb! (vim uses lots of globals.) Furthermore, the program can be
-used with any make-based program out of the box -- not change to Makefiles or
+used with any make-based program out of the box -- no change to Makefiles or
 input file lists required.
 
 A short word of warning: clang is still work in prograss. C++-support is not
@@ -62,6 +62,7 @@ Unix-based platform, but in principle everything should work on Windows, too.
 [llvm]: http://llvm.org
 [cscout-paper]: http://www.spinellis.gr/pubs/jrnl/2003-TSE-Refactor/html/Spi03r.html
 [gtk-refactor]: http://people.imendio.com/richard/gtk-rewriter/
+[ctags]: http://ctags.sourceforge.net/
 
 
 Getting started
@@ -105,6 +106,8 @@ XXX
 This is for example useful in raw mode. Perhaps have a "Tut 0" that does
 syntax highlighting only?)
 -->
+
+[graphviz]: http://pixelglow.com/graphviz/
 
 Tutorial 01: The bare minimum
 ---
@@ -343,12 +346,45 @@ Tutorial 04: Parsing the file
 
 The preprocessor gives us a stream of tokens. We could now write a parser that
 parses that token stream into an AST. Luckily, clang can do this for us.
+However, clang decouples the parser from AST construction, meaning that you
+can use the parser, but not use clang's AST.
 
-`Action`, `MinimalAction`.
+So, how does clang's parser work? The constructor of the `Parser` class takes
+an object of type `Action`. `Action` is an interface class that has a virtual
+method for everything that is parsed. For example, `ActOnStartOfFunctionDef()`
+is called when the parser parses the start of a function definition. At the
+time of this writing, there are close to 100 `ActOn*()` methods which you can
+override.
 
-Change linker flags.
+Nearly all overrides are optional. However, `isTypeName()` must be specified
+so that the parser can differentiate XXX.
 
-See `tut04_parse.cpp`, `input03.c`
+Luckily, the class `MinimalAction` already implements this bit of required
+minimal semantic checking for us, so we can simply use this. Here's how the
+parser is used:
+
+    IdentifierTable tab(context.opts);
+    MinimalAction action(tab);
+    Parser p(context.pp, action);
+    p.ParseTranslationUnit();
+
+That's actually all we're going to do in this part. To compile the program,
+you need to add `-lclangParse` to the linker flags. See `tut04_parse.cpp` for
+the complete program. To make the program slightly less boring, it outputs
+some statistics about the program it parses (example input is `input03.c`):
+
+    $ ./tut04 input03.c
+
+    *** Identifier Table Stats:
+    # Identifiers:   83
+    # Empty Buckets: 8109
+    Hash density (#identifiers per bucket): 0.010132
+    Ave identifier length: 8.084337
+    Max identifier length: 28
+
+    Number of memory regions: 1
+    Bytes allocated: 1901
+
 
 Tutorial 05: Doing something interesting
 ---
