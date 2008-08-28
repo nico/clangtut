@@ -29,7 +29,7 @@ typedef unsigned int u32;
 typedef int (*funcpointertype)(int, int);
 typedef int functype(int, int);
 
-int *(funcp)(int, int);
+int (*funcp)(int, int);
 
 __typeof(funcp) fp2;
 funcpointertype fp3;

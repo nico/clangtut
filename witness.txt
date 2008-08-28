@@ -1573,6 +1573,8 @@ Found global user declarator t
 Read top-level variable decl: 'a'
 Read top-level variable decl: 'a'
 Read top-level variable decl: 'b'
+Read top-level variable decl: 'funcp'
+Read top-level variable decl: 'fp2'
 Read top-level variable decl: 'fp3'
 Read top-level variable decl: 't'
 ./tut07 -DTEST input05.c
@@ -1584,6 +1586,8 @@ input05.c: static staticvar
 input05.c: a
 input05.c: a
 input05.c: b
+input05.c: funcp
+input05.c: fp2
 input05.c: fp3
 input05.c: t
 </pre></code>
@@ -1604,6 +1608,8 @@ defining TEST
 </span><span class="global">input06.c: anothervar  (1 local uses)
 </span><span class="uses">  main:50
 </span><span class="global">input06.c: b  (0 local uses)
+</span><span class="uses"></span><span class="global">input06.c: funcp  (0 local uses)
+</span><span class="uses"></span><span class="global">input06.c: fp2  (0 local uses)
 </span><span class="uses"></span><span class="global">input06.c: fp3  (0 local uses)
 </span><span class="uses"></span><span class="global">input06.c: t  (0 local uses)
 </span><span class="uses"></span></code></pre>
