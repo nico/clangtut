@@ -158,7 +158,7 @@ public:
       // skip globals from system headers
       VarDecl* VD = globals[i].first;
       FullSourceLoc loc(VD->getLocation(), *sm);
-      if (loc.isFileID() && loc.isInSystemHeader()) continue;
+      if (loc.isInSystemHeader()) continue;
 
 
       //allUses.append(uses[VD].begin(), uses[VD].end());
@@ -187,7 +187,7 @@ public:
       DeclRefExpr* dre = allUses[j];
       FullSourceLoc loc(dre->getLocStart(), *sm);
       // Skip uses in functions from system headers
-      if (loc.isFileID() && loc.isInSystemHeader()) continue;
+      if (loc.isInSystemHeader()) continue;
       allInterestingUses.push_back(dre);
     }
 
@@ -234,7 +234,6 @@ void addIncludesAndDefines(PPContext& c) {/*{{{*/
   // Add header search directories (C only, no C++ or ObjC)
 
   InitHeaderSearch init(c.headers);
-  vector<DirectoryLookup> dirs;
 
   // user headers
   for (int i = 0; i < I_dirs.size(); ++i) {
@@ -250,7 +249,7 @@ void addIncludesAndDefines(PPContext& c) {/*{{{*/
   vector<char> predefineBuffer;
   for (int i = 0; i < D_macros.size(); ++i) {
     cerr << "defining " << D_macros[i] << endl;
-    DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
+    ::DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
   }
   predefineBuffer.push_back('\0');
   c.pp.setPredefines(&predefineBuffer[0]);

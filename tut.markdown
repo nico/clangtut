@@ -388,8 +388,116 @@ some statistics about the program it parses (example input is `input03.c`):
     Number of memory regions: 1
     Bytes allocated: 1901
 
-<!--
-Actually surprisingly tricky. Eli Friedman:
+
+Tutorial 05: Doing something interesting
+---
+
+By now, we can do some actual analysis of the input code. Remember, we want to
+write a program that lists information about global variables. Finding all
+globals in a program is a good start. One possible approach is to use the
+parser for this.
+
+Every time the parser finds a declarator, the parser calls `ActOnDeclarator()`
+on the action object. Thus, we override this method in our own subclass of
+`MinimalAction`.
+
+What is a declarator? It is a C statement that declares something -- a
+variable, a function, a struct, a typedef. Here are some examples of
+declarators:
+
+    const unsigned long int b;  // b is just a constant
+    int *i;  // declares (and defines) a pointer-to-int variable
+    extern int a;  //declares an int variable
+    void printf(const char* c, ...);  // a function prototype
+    typedef unsigned int u32;  // a typedef
+    struct { int a } t;  // a variable that has an anonymous struct as type
+    char *(*(**foo [][8])())[];  // ...wtf? see below :-)
+
+A declaration has very roughly two parts: the declared type on the left (e.g.
+`const unsigned long int` or `struct { int a }`) and a list of "modifiers" and
+the variable name itself on the right (e.g. `b`, `*i`, or `*(*(**foo
+[][8])())[]`). The part on the left is represented by a `DeclSpec` in clang,
+the (potentially complex) part on the right is a list of `DeclaratorChunk`s. A
+`DeclaratorChunk` has a `Kind` that can be one of `Pointer`, `Reference`,
+`Array`, or `Function`.
+
+As explained [here][c-decl] (go read it!), the last declarator above has this
+type:
+
+> foo is array of array of 8 pointer to pointer to function returning pointer
+> to array of pointer to char
+
+Accordingly, the `DeclaratorChunk` passed to our callback has a list of
+`DeclaratorChunk`s that contain, in that order, the following `Kind`s:
+`Array`, `Array`, `Pointer`, `Pointer`, `Pointer`, `Function`, `Pointer`,
+`Array`, `Pointer`. Each of the chunks contains more information (e.g. the
+array size for `Array` chunks).
+
+Since we want to detect global variables, we need to skip `Declarator`s whose
+first `DeclaratorChunk` has `Kind` `Function`. Luckily, `DeclaratorChunk` has
+the method `isFunctionDeclarator()` which does this check, so we can use that.
+
+Furthermore, we're only interested in declarations at file scope (as opposed
+to, say, function parameters or local declarations). To check this,
+`Declarator` offers the `getContext()` function, which returns `FileContext`
+for declarators at file scope.
+
+We are not interested in declarators that start with `typedef` or `extern`
+(we're looking for definition of globals, not their declaration). As `typedef`
+and `extern` belong the the "left" part of a declarator, information about
+them is stored in the declarator's `DeclSpec`.
+
+Finally, we are not interested in globals from system headers. To check for
+this, we need to know which file the declarator was found in. clang uses the
+class `SourceLocation` to represent this information. Since there are lots of
+`SourceLocation`s (every identifier needs to store where it is from, for
+example), some effort has been done to make `SourceLocation` small -- it's
+only 32 bit, as small as an `int`. As a result, a `SourceLocation` alone
+cannot tell you much, you also need a `SourceManager`, which works together
+with `SourceLocation` for full-featured file identification. `SourceManager`
+has a method `isInSystemHeader(loc)` that we can use. (XXX: difference between
+file ids and macro ids.)
+
+All in all, our `ActOnDeclarator()` method looks like this:
+
+    virtual Action::DeclTy *
+    ActOnDeclarator(Scope *S, Declarator &D, DeclTy *LastInGroup) {
+      const DeclSpec& DS = D.getDeclSpec();
+      SourceLocation loc = D.getIdentifierLoc();
+
+      if (D.getContext() == Declarator::FileContext
+          && DS.getStorageClassSpec() != DeclSpec::SCS_extern
+          && DS.getStorageClassSpec() != DeclSpec::SCS_typedef
+          && !D.isFunctionDeclarator()
+          && !pp.getSourceManager().isInSystemHeader(loc)
+         ) {
+        IdentifierInfo *II = D.getIdentifier();
+        cerr << "Found global declarator " << II->getName() << endl;
+      }
+      return MinimalAction::ActOnDeclarator(S, D, LastInGroup);
+    }
+
+`DeclTy` is just a typedef for `void`. Every `Action` can decide how it wants
+to represent declarations. We use whatever `MinimalAction` uses. The only
+parameter that is interesting to us is `Declarator &D`. 
+
+The complete program is `tut05_parse.cpp`. Here's its output for `input04.c`:
+
+    Found global user declarator a
+    Found global user declarator a
+    Found global user declarator b
+    Found global user declarator c
+    Found global user declarator funcp
+    Found global user declarator fp2
+    Found global user declarator fp3
+    Found global user declarator f
+    Found global user declarator f2
+    Found global user declarator t
+
+The program works well, but it has a few quirks. Once, it believes that `f`
+and `f2` are globals, when they are really just function declarations. With
+the words of [Eli Friedman][eli], from clang's excellent and very helpful
+[mailing list][clang-list]:
 
 > Fundamentally, in C, it's impossible to
 > tell apart a global function declaration and a global variable
@@ -403,53 +511,17 @@ Actually surprisingly tricky. Eli Friedman:
 >     typedef int x();
 >     x z;
 >     __typeof(z) r;
--->
 
-Tutorial 05: Doing something interesting
----
+We will fix this problem in the next part.
 
-By now, we can do some actual analysis of the input code. Remember, we want to
-write a program that lists information about global variables. Finding all
-globals in a program is a good start. One possible approach is to use the
-parser for this.
+Also note that this does not find `static`s local to functions (which are
+globals, too). We won't fix this in the tutorial, but it's not too hard to do
+if you want to give it a shot.
 
-Every time the parser finds a declaration, the parser calls
-`ActOnDeclarator()` on the action object. Thus, we override this method in
-your own subclass of `MinimalAction`.
+[c-decl]: http://eli.thegreenplace.net/2008/07/18/reading-c-type-declarations/
+[eli]: http://article.gmane.org/gmane.comp.compilers.clang.devel/2103
+[clang-list]: http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev
 
-`DeclTy` etc are abstract in parser. It calls method on the `Action` to create
-them and then passes them again to the action object.
-
-A declaration has very roughly two parts: the declared type on the left and a
-list of "modifiers" on the right. Left is a `DeclSpec`, right is a list of
-`DeclaratorChunk`s.
-
-`DeclSpec` contains information about the declaration. `DeclaratorChunk`s
-store modifiers like pointer, array, reference, or function. For example,
-
-    char *(*(**foo [][8])())[];
-
-> foo is array of array of 8 pointer to pointer to function returning pointer
-> to array of pointer to char
-
-will have the following `DeclaratorChunk`s:
-
-
-    Arr
-    Arr
-    Pointer
-    Pointer
-    Fn
-    Pointer
-    Arr
-    Pointer
-
-Note that this does not find `static`s local to functions (which are globals,
-too).
-
-See `tut05_parse.cpp`, `input04.c`
-
-http://eli.thegreenplace.net/2008/07/18/reading-c-type-declarations/
 
 Tutorial 06: Doing semantic analysis with clang
 ---

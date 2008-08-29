@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
   vector<char> predefineBuffer;
   for (int i = 0; i < D_macros.size(); ++i) {
     cerr << "defining " << D_macros[i] << endl;
-    DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
+    ::DefineBuiltinMacro(predefineBuffer, D_macros[i].c_str());
   }
   predefineBuffer.push_back('\0');
   context.pp.setPredefines(&predefineBuffer[0]);

@@ -15,7 +15,7 @@ public:
   MyAction(IdentifierTable& tab, const Preprocessor& prep)
     : MinimalAction(tab), pp(prep) {}
 
-  Action::DeclTy *
+  virtual Action::DeclTy *
   ActOnDeclarator(Scope *S, Declarator &D, DeclTy *LastInGroup) {
     // Print names of global variables. Differentiating between
     // global variables and global functions is Hard in C, so this
