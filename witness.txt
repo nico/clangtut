@@ -1573,6 +1573,7 @@ Found global user declarator t
 Read top-level variable decl: 'a'
 Read top-level variable decl: 'a'
 Read top-level variable decl: 'b'
+Read top-level variable decl: 'c'
 Read top-level variable decl: 'funcp'
 Read top-level variable decl: 'fp2'
 Read top-level variable decl: 'fp3'
