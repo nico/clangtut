@@ -90,7 +90,9 @@ and binaries will end up in `llvm/Debug` and are a lot slower than the release
 binaries (which you get when running `./configure --enable-optimized`).
     
 You can find more information in clang's [official getting started
-guide](http://clang.llvm.org/get_started.html).
+guide](http://clang.llvm.org/get_started.html). By the way, if you're using
+Time Machine, you probably want to emit the llvm folder from your backup --
+else, 700mb get backed up every time you update and recompile llvm and clang.
 
 XXX: [Browse clang source](https://llvm.org/svn/llvm-project/cfe/trunk/).
 
@@ -613,9 +615,8 @@ questions
 ---
 
 * Why does `-ast-dump` only print the first var in a decl?
-* Why is `funcpointertype fp3` special?
 * libDriver: `DefineBuiltinMacro`, `DeclPrinter`,
-             `addIncludePath`, pp construction (inter alia header search),
+             pp construction (inter alia header search),
              perhaps standard options (-D, -I, ?)
 
 

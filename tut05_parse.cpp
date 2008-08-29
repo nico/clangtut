@@ -23,7 +23,6 @@ public:
 
     // Only global declarations...
     if (D.getContext() == Declarator::FileContext) {
-      IdentifierInfo *II = D.getIdentifier();
       const DeclSpec& DS = D.getDeclSpec();
 
       // ...that aren't typedefs or `extern` declarations...
@@ -33,14 +32,11 @@ public:
         // ...and no functions...
         if (!D.isFunctionDeclarator()) {
 
-          SourceLocation loc = DS.getTypeSpecTypeLoc();
+          SourceLocation loc = D.getIdentifierLoc();
           // ...and in a user header
           SourceManager& sm = pp.getSourceManager();
-          HeaderSearch& headers = pp.getHeaderSearchInfo();
-          const FileEntry *DeclFile = sm.getFileEntryForLoc(loc);
-          if (DeclFile != 0
-              && headers.getFileDirFlavor(DeclFile)
-                  == DirectoryLookup::NormalHeaderDir) {
+          if (!sm.isInSystemHeader(loc)) {
+            IdentifierInfo *II = D.getIdentifier();  // XXX: ident optional?
             cerr << "Found global user declarator " << II->getName() << endl;
           }
         }
