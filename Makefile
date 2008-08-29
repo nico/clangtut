@@ -71,6 +71,9 @@ html: tut.markdown tut.css
 	#echo '<style type="text/css" src="tut.css"></style>' >> tut.html
 	echo '</head><body><div class="page">' >> tut.html
 	python linkify.py tut.markdown | Markdown.pl --html4tags | SmartyPants.pl >> tut.html
+	echo '</div><div class="footer">' >> tut.html
+	echo 'Last modified on' >> tut.html
+	date >> tut.html
 	echo '</div></body></html>' >> tut.html
 
 viewhtml: html

@@ -21,7 +21,7 @@ body {
   -moz-border-radius: 14px;
   -webkit-border-radius: 14px;
   margin-top: 55px;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 }
 pre {
   padding: 15px;
@@ -62,4 +62,9 @@ blockquote {
   padding: 0px 0px 0px 10px;
   margin-left: 5px;
   margin-right: 0px;
+}
+.footer {
+  font-style: italic;
+  color: gray;
+  margin-bottom: 40px;
 }
