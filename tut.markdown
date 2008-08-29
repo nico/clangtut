@@ -469,8 +469,7 @@ All in all, our `ActOnDeclarator()` method looks like this:
           && DS.getStorageClassSpec() != DeclSpec::SCS_extern
           && DS.getStorageClassSpec() != DeclSpec::SCS_typedef
           && !D.isFunctionDeclarator()
-          && loc.isValid() && !pp.getSourceManager().isInSystemHeader(loc)
-         ) {
+          && !pp.getSourceManager().isInSystemHeader(loc)) {
         IdentifierInfo *II = D.getIdentifier();
         cerr << "Found global declarator " << II->getName() << endl;
       }
