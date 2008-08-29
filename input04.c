@@ -30,4 +30,4 @@ int main()
 /*int test() = main;*/  // illegal
 
 struct s {} t;
-struct s {};
+struct x {};

@@ -21,26 +21,25 @@ public:
     // global variables and global functions is Hard in C, so this
     // is only an approximation.
 
-    // Only global declarations...
-    if (D.getContext() == Declarator::FileContext) {
-      const DeclSpec& DS = D.getDeclSpec();
+    const DeclSpec& DS = D.getDeclSpec();
+    SourceLocation loc = D.getIdentifierLoc();
 
-      // ...that aren't typedefs or `extern` declarations...
-      if (DS.getStorageClassSpec() != DeclSpec::SCS_extern
-          && DS.getStorageClassSpec() != DeclSpec::SCS_typedef) {
+    if (
+        // Only global declarations...
+        D.getContext() == Declarator::FileContext
+        
+        // ...that aren't typedefs or `extern` declarations...
+        && DS.getStorageClassSpec() != DeclSpec::SCS_extern
+        && DS.getStorageClassSpec() != DeclSpec::SCS_typedef
 
         // ...and no functions...
-        if (!D.isFunctionDeclarator()) {
+        && !D.isFunctionDeclarator()
 
-          SourceLocation loc = D.getIdentifierLoc();
-          // ...and in a user header
-          SourceManager& sm = pp.getSourceManager();
-          if (!sm.isInSystemHeader(loc)) {
-            IdentifierInfo *II = D.getIdentifier();  // XXX: ident optional?
-            cerr << "Found global user declarator " << II->getName() << endl;
-          }
-        }
-      }
+        // ...and in a user header
+        && !pp.getSourceManager().isInSystemHeader(loc)
+       ) {
+      IdentifierInfo *II = D.getIdentifier();  // XXX: ident optional?
+      cerr << "Found global user declarator " << II->getName() << endl;
     }
 
     return MinimalAction::ActOnDeclarator(S, D, LastInGroup);
