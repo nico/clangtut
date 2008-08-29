@@ -12,10 +12,11 @@ using namespace clang;
 class MyASTConsumer : public ASTConsumer {
 public:
   virtual void HandleTopLevelDecl(Decl *D) {
-    // XXX: does not print c in `int b, c;`.
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
-        cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+      for (; VD; VD = cast_or_null<VarDecl>(VD->getNextDeclarator())) {
+        if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
+          cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+      }
     }
   }
 };

@@ -40,7 +40,7 @@ better with C++ and at all with Objective-C? Would you like to collect some
 statistics about your program, and you feel that `grep` doesn't cut it? Then
 clang is for you.
 
-This tutorials will offer a tour through clang's preprocessor, parser, and AST
+This tutorial will offer a tour through clang's preprocessor, parser, and AST
 libraries. As example, we will write a program that collects a list of all
 globals defined and used in a program. For [these](input07.h)
 [input](input07_1.c) [files](input07_2.c), this [output](input07.html) will be
@@ -201,7 +201,7 @@ program:
 
     ./tut01
 
-Sure enough, It doesn't do anything yet. Let's tackle this next.
+Sure enough, it doesn't do anything yet. Let's tackle this next.
 
 [cross-compiler]: http://en.wikipedia.org/wiki/Cross_compile
 
@@ -235,10 +235,10 @@ and read the preprocessed input tokens:
     } while (Tok.isNot(tok::eof));
 
 See `tut02_pp.cpp` for the complete program. Note that this is a very complete
-preprocessor, it handles all kinds of corner cases correclty already. It also
+preprocessor, it handles all kinds of corner cases correctly already. It also
 strips comments. The program can be compiled exactly like `tut01`.
 
-After building, play around with it a bit. For example, here's the output if
+After building, play around with it a bit. For example, here's its output when
 `input01.c` is given as an input file:
 
     $ ./tut02 input01.c 
