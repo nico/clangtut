@@ -36,9 +36,9 @@ public:
         && !D.isFunctionDeclarator()
 
         // ...and in a user header
-        && !pp.getSourceManager().isInSystemHeader(loc)
+        && loc.isValid() && !pp.getSourceManager().isInSystemHeader(loc)
        ) {
-      IdentifierInfo *II = D.getIdentifier();  // XXX: ident optional?
+      IdentifierInfo *II = D.getIdentifier();
       cerr << "Found global user declarator " << II->getName() << endl;
     }
 

@@ -469,7 +469,7 @@ All in all, our `ActOnDeclarator()` method looks like this:
           && DS.getStorageClassSpec() != DeclSpec::SCS_extern
           && DS.getStorageClassSpec() != DeclSpec::SCS_typedef
           && !D.isFunctionDeclarator()
-          && !pp.getSourceManager().isInSystemHeader(loc)
+          && loc.isValid() && !pp.getSourceManager().isInSystemHeader(loc)
          ) {
         IdentifierInfo *II = D.getIdentifier();
         cerr << "Found global declarator " << II->getName() << endl;
@@ -526,21 +526,39 @@ if you want to give it a shot.
 Tutorial 06: Doing semantic analysis with clang
 ---
 
-Interface to sema is very minimalistic: Just a single function. Behind the
-scenes, that function builds a `Parser` object and passes it an `Action` that
-does the semantic analysis. The `Action` builds an AST while doing this.
+To differentiate variable declarations from function prototypes, we need to do
+semantic analysis. Again, clang can do this for us. Its Sema library is
+basically just an `Action` object that is passed to the parser. However, all
+this happens behind the scenes.
+
+The interface to Sema is very minimalistic: It's just a single function,
+`ParseAST()`. This function takes a `Preprocessor` object and an
+`ASTConsumer`. Behind the scenes, that function builds a `Parser` object and
+passes it an `Action` that does the semantic analysis. This `Action` builds an
+AST while doing this.
 
 We can now get rid of our `MyAction`. Instead, we do now need an
-`ASTConsumer` (which will be deleted by sema).
+`ASTConsumer`, which you can think of as an `Action` for Sema. The method we
+want to override iw `HandleTopLevelDecl()`, which is called (surprise!) for
+every top-level declaration. The method gets passed a `Decl` object, which is
+the AST class used for declarations.
 
-BTW: last param prints stats. clang is obsessed with having a low memory
-consumption :-)
+We want to handle only `VarDecl`s, and only those that are global and not
+`extern`. This yields
 
-`ParseAST()` also calls `EnterMainSourceFile()` on the preprocessor. So don't
-call this yourself, else you get errors about duplicate definitions (because
-the main source file is entered twice into the pp's file list).
+    // XXX: does not print c in `int b, c;`.
+    if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
+        cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+    }
 
-Example:
+Note that this is much simpler than what we did in the last part -- and it's
+more correct too. Yay.
+
+Our new program is shown in `tut06_sema.cpp`.  `ParseAST()` also calls
+`EnterMainSourceFile()` on the preprocessor. So don't call this yourself, else
+you get errors about duplicate definitions (because the main source file is
+entered twice into the pp's file list), such as
 
     predefines>:3:15: error: redefinition of '__builtin_va_list'
     typedef char* __builtin_va_list;
@@ -548,13 +566,21 @@ Example:
     <predefines>:3:15: error: previous definition is here
     typedef char* __builtin_va_list;
 
-Happens also for stuff in your program.
+Here's what our program prints for `input04.c`:
 
+    Read top-level variable decl: 'a'
+    Read top-level variable decl: 'a'
+    Read top-level variable decl: 'b'
+    Read top-level variable decl: 'funcp'
+    Read top-level variable decl: 'fp2'
+    Read top-level variable decl: 'fp3'
+    Read top-level variable decl: 't'
 
-Now with own `MyASTConsumer`. Code slightly simpler (and much more correct)
-than the former version.
+Observe that `f` and `f2` are now correctly omitted. However, `c` is omitted
+too (XXX: why?)
 
-See `tut06_sema.cpp`, `input04.c`
+Our program is now already good enough to handle real-life code (and we're
+still well below 50 lines), but it's interface is not. Let's tackle this next.
 
 
 Tutorial 07: Support for real programs
