@@ -538,17 +538,22 @@ AST while doing this.
 
 We can now get rid of our `MyAction`. Instead, we do now need an
 `ASTConsumer`, which you can think of as an `Action` for Sema. The method we
-want to override iw `HandleTopLevelDecl()`, which is called (surprise!) for
+want to override is `HandleTopLevelDecl()`, which is called (surprise!) for
 every top-level declaration. The method gets passed a `Decl` object, which is
-the AST class used for declarations.
+the AST class used for declarations. `HandleTopLevelDecl()` has a minor quirk:
+if a declaration contains multiple variables (e.g. `int a, b;`), it is called
+only once, and the `Decl` that's passed in is a linked list that you need to
+walk (this will be changed [to something more sane][sane-decl] in the future,
+though).
 
 We want to handle only `VarDecl`s, and only those that are global and not
 `extern`. This yields
 
-    // XXX: does not print c in `int b, c;`.
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
-        cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+      for (; VD; VD = cast_or_null<VarDecl>(VD->getNextDeclarator())) {
+        if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern)
+          cerr << "Read top-level variable decl: '" << VD->getName() << "'\n";
+      }
     }
 
 Note that this is much simpler than what we did in the last part -- and it's
@@ -570,16 +575,18 @@ Here's what our program prints for `input04.c`:
     Read top-level variable decl: 'a'
     Read top-level variable decl: 'a'
     Read top-level variable decl: 'b'
+    Read top-level variable decl: 'c'
     Read top-level variable decl: 'funcp'
     Read top-level variable decl: 'fp2'
     Read top-level variable decl: 'fp3'
     Read top-level variable decl: 't'
 
-Observe that `f` and `f2` are now correctly omitted. However, `c` is omitted
-too (XXX: why?)
+Observe that `f` and `f2` are now correctly omitted.
 
 Our program is now already good enough to handle real-life code (and we're
 still well below 50 lines), but it's interface is not. Let's tackle this next.
+
+[sane-decl]: http://lists.cs.uiuc.edu/pipermail/cfe-dev/2008-August/002589.html
 
 
 Tutorial 07: Support for real programs
