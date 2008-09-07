@@ -592,17 +592,64 @@ still well below 50 lines), but it's interface is not. Let's tackle this next.
 Tutorial 07: Support for real programs
 ---
 
--I, -D
+Compiling "real" source files usually requires that several flags are passed
+to the compiler. Flags that are commonly used are `-I` to add directories to
+the include file search path, and `-D` to define macros at the command line.
 
-http://llvm.org/docs/CommandLine.html
+If we make our program compatible to the flags that are used by common C
+compilers, then we can analyze existing programs simply by changing the
+compiler. Hence, we'll add support for `-I` and `-D` to our program.
 
-Nice output ?
+Furthermore, "real" compilation invocations ususally pass several other flags
+that are specific to code generation. Those flags are not important to our
+program. Hence, our program will accept arbitrary flags but will ignore them.
+
+Adding support for command-line parameters usually requires a fair amount of
+code. Luckily, we don't have to write this code: clang belongs to the LLVM
+project, and LLVM has a very powerful command-line parameter handling library.
+It also has [great documentation][llvm-commandline], hence I won't explain it
+in detail. In short:
+
+XXX
+
+Code necessary to implement `-I` (easy) and `-D` (currently harder than it
+should be). Slurp rest, need special-case slurper for `-o`.
+
+Vim:
+
+    gcc -c -I. -Iproto -DHAVE_CONFIG_H -DFEAT_GUI_MAC -fno-common \
+     -fpascal-strings -Wall -Wno-unknown-pragmas -mdynamic-no-pic \
+     -pipe -I. -Iproto -DMACOS_X_UNIX -no-cpp-precomp \
+     -I/Developer/Headers/FlatCarbon  -g -O2 \
+     -I/System/Library/Frameworks/Python.framework/Versions/2.5/include/python2.5 \
+     version.c -o objects/version.o
+
+thus:
+
+    static llvm::cl::list<std::string>
+    D_macros("D", llvm::cl::value_desc("macro"), llvm::cl::Prefix,
+        llvm::cl::desc("Predefine the specified macro"));
+
+    static llvm::cl::list<std::string>
+    I_dirs("I", llvm::cl::value_desc("directory"), llvm::cl::Prefix,
+        llvm::cl::desc("Add directory to include search path"));
+
+    static llvm::cl::opt<string>
+    InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"),
+        llvm::cl::Required);
+
+    static llvm::cl::list<std::string> IgnoredParams(llvm::cl::Sink);
+    static llvm::cl::opt<string> dummy("o", llvm::cl::desc("dummy for gcc compat"));
+
+Nice output ? -- html output
 
 Also take care of `static`s and print the name of the defining file.
 
 `TranslationUnit` contains a whole AST (i.e. all toplevel decls)
 
 See `tut07_sema.cpp`, `input05.c`
+
+[llvm-commandline]: http://llvm.org/docs/CommandLine.html
 
 
 Tutorial 08: Working with the AST
@@ -663,29 +710,6 @@ now. We need to serialize for each file:
 
 The linker then can for each global list all uses.
 
-Interlude: `DiagnosticClient`. In practice needs a `HeaderSearch` object to
-implement `isInSystemHeader()`. However, many clients really only need
-`hasErrorOccurred()` on `Diagnostics`, so making the HS mandatory for the
-client (which is mandatory for D) causes grief for clients. But a
-`TextDiagnosticClient` without HS is dangerous. Best fix: make HS mandatory
-for DC, but DC not for D?
-
-Furthermore, `HTMLDiagnositcs` shows warnings in system headers, TextDiag
-doesn't.
-
-Better: Fold TextDiagnostics into DiagnosticClient, base stuff on that. Make
-HS mandatory for DC, etc. Problem: HS is in Lex, DC in Basic. Moving HS
-requires moving DirectoryLookup.
-
-Ted doesn't like this: Some DiagClients don't care about headers (if ast comes
-from deserializing, e.g.). So isInSystemHeader() really shouldn't be in
-DiagClient if it's only useful during lexing/pp/sema. Add method
-`DiagFromFile` to `Diagnostics` and let it check for sys-header-dom? If this
-should be disablable, add flag to `Diagnostics` (so DiagClient becomes purely
-presentational).
-
-Good: Clients do not have to take care of this
-
 Need to ignore globals in system headers. Tricky: Where to put -I files? Need
 them as users for some dirs (., proto), as system for others (python). For now
 keep them as system and whitelist `.`. This drops proto, but that's ok for
@@ -718,7 +742,6 @@ analysis lib is cool and wasn't covered at all.
 questions
 ---
 
-* Why does `-ast-dump` only print the first var in a decl?
 * libDriver: `DefineBuiltinMacro`, `DeclPrinter`,
              pp construction (inter alia header search),
              perhaps standard options (-D, -I, ?)

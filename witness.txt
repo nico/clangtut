@@ -1587,6 +1587,7 @@ input05.c: static staticvar
 input05.c: a
 input05.c: a
 input05.c: b
+input05.c: c
 input05.c: funcp
 input05.c: fp2
 input05.c: fp3

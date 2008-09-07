@@ -48,12 +48,14 @@ public:
     // XXX: does not print c in `int b, c;`.
     // XXX: prints both declaration and defintion of `a` in input05.c
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
-        FullSourceLoc loc(D->getLocation(), *sm);
-        bool isStatic = VD->getStorageClass() == VarDecl::Static;
+      for (; VD; VD = cast_or_null<VarDecl>(VD->getNextDeclarator())) {
+        if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
+          FullSourceLoc loc(D->getLocation(), *sm);
+          bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
-        cout << loc.getSourceName() << ": "
-             << (isStatic?"static ":"") << VD->getName() << "\n";
+          cout << loc.getSourceName() << ": "
+            << (isStatic?"static ":"") << VD->getName() << "\n";
+        }
       }
     }
   }
