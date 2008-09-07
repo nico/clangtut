@@ -1,14 +1,18 @@
-CXXFLAGS=-I/Users/nico/src/llvm-svn/tools/clang/include \
+LLVMHOME=/Users/nico/src/llvm-svn
+LLVMCONFIG=$(LLVMHOME)/Debug/bin/llvm-config
+CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 		 -fno-rtti \
-		 `/Users/nico/src/llvm-svn/Debug/bin/llvm-config --cxxflags`
+		 `$(LLVMCONFIG) --cxxflags`
 
 # clangParse required starting from tut04
 # clangAST and clangSema required starting from tut06
 # clangRewrite required in tut09
-LDFLAGS=-lclangBasic -lclangLex -lclangParse -lclangSema -lclangAST \
-		-lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter \
-		-lclangRewrite -lclangDriver \
-		 `/Users/nico/src/llvm-svn/Debug/bin/llvm-config --ldflags`
+LDFLAGS= `$(LLVMCONFIG) --ldflags`
+LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema \
+			 -lclangDriver -lclangAST -lclangParse -lclangLex -lclangBasic \
+			 -lLLVMCore -lLLVMSupport -lLLVMSystem \
+			 -lLLVMBitWriter -lLLVMBitReader -lLLVMCodeGen -lLLVMAnalysis \
+			 -lLLVMTarget
 
 all: tut01 tut02 tut03 tut04 tut05 tut06 tut07 tut08 tut09
 
@@ -19,31 +23,31 @@ clean:
 	rm -rf input07_1.o input07_2.o input07.html
 
 tut09: tut09_ast.o
-	g++ $(LDFLAGS) -o tut09 tut09_ast.o
+	g++ $(LDFLAGS) -o tut09 tut09_ast.o $(LIBS)
 
 tut08: tut08_ast.o
-	g++ $(LDFLAGS) -o tut08 tut08_ast.o
+	g++ $(LDFLAGS) -o tut08 tut08_ast.o $(LIBS)
 
 tut07: tut07_sema.o
-	g++ $(LDFLAGS) -o tut07 tut07_sema.o
+	g++ $(LDFLAGS) -o tut07 tut07_sema.o $(LIBS)
 
 tut06: tut06_sema.o
-	g++ $(LDFLAGS) -o tut06 tut06_sema.o
+	g++ $(LDFLAGS) -o tut06 tut06_sema.o $(LIBS)
 
 tut05: tut05_parse.o
-	g++ $(LDFLAGS) -o tut05 tut05_parse.o
+	g++ $(LDFLAGS) -o tut05 tut05_parse.o $(LIBS)
 
 tut04: tut04_parse.o
-	g++ $(LDFLAGS) -o tut04 tut04_parse.o
+	g++ $(LDFLAGS) -o tut04 tut04_parse.o $(LIBS)
 
 tut03: tut03_pp.o
-	g++ $(LDFLAGS) -o tut03 tut03_pp.o
+	g++ $(LDFLAGS) -o tut03 tut03_pp.o $(LIBS)
 
 tut02: tut02_pp.o
-	g++ $(LDFLAGS) -o tut02 tut02_pp.o
+	g++ $(LDFLAGS) -o tut02 tut02_pp.o $(LIBS)
 
 tut01: tut01_pp.o
-	g++ $(LDFLAGS) -o tut01 tut01_pp.o
+	g++ $(LDFLAGS) -o tut01 tut01_pp.o $(LIBS)
 
 test:
 	make runtest 2>&1 | cmp witness.txt -
