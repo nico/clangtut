@@ -45,7 +45,6 @@ public:
   }
 
   virtual void HandleTopLevelDecl(Decl *D) {
-    // XXX: does not print c in `int b, c;`.
     // XXX: prints both declaration and defintion of `a` in input05.c
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       for (; VD; VD = cast_or_null<VarDecl>(VD->getNextDeclarator())) {
