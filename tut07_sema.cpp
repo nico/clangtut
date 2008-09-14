@@ -12,6 +12,7 @@ using namespace std;
 #include "llvm/Support/CommandLine.h"
 #include "PPContext.h"
 
+#include "llvm/System/Signals.h"
 using namespace clang;
 
 // This function is already in Preprocessor.cpp and clang.cpp. It should be
@@ -50,8 +51,10 @@ public:
       for (; VD; VD = cast_or_null<VarDecl>(VD->getNextDeclarator())) {
         if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
           FullSourceLoc loc(D->getLocation(), *sm);
+          loc.Dump();
           bool isStatic = VD->getStorageClass() == VarDecl::Static;
 
+          loc = loc.getLogicalLoc();
           cout << loc.getSourceName() << ": "
             << (isStatic?"static ":"") << VD->getName() << "\n";
         }
@@ -79,6 +82,7 @@ static llvm::cl::opt<string> dummy("o", llvm::cl::desc("dummy for gcc compat"));
 
 int main(int argc, char* argv[])
 {
+  llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::cl::ParseCommandLineOptions(argc, argv, " globalcollect\n"
       "  This collects and prints global variables found in C programs.");
 

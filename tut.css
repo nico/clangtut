@@ -68,3 +68,22 @@ blockquote {
   color: gray;
   margin-bottom: 40px;
 }
+.sidebar {
+  color: #000;
+  background-color: #edefe4;
+  width: 240px;
+  float: right;
+  position: relative;
+  left: 200px;
+  padding: 0;
+  margin: 0;
+  margin-left: 14px;
+  z-index: 15;
+}
+.sidebar h1 {
+    text-align: center;
+    margin: 0;
+    padding: 4px;
+    font-size: 1.2em;
+}
+

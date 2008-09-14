@@ -59,7 +59,7 @@ runtest: all
 	./tut04 input03.c
 	./tut05 input04.c
 	./tut06 input04.c
-	./tut07 -DTEST input05.c
+	./tut07 -DTEST input05.c | tee input05.html
 	./tut08 -DTEST input06.c
 	./tut09 -o input07_1.o input07_1.c
 	./tut09 -o input07_2.o input07_2.c

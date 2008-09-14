@@ -1578,7 +1578,7 @@ Read top-level variable decl: 'funcp'
 Read top-level variable decl: 'fp2'
 Read top-level variable decl: 'fp3'
 Read top-level variable decl: 't'
-./tut07 -DTEST input05.c
+./tut07 -DTEST input05.c | tee input05.html
 defining TEST
 <h2><code>input05.c</code></h2>
 

@@ -3,7 +3,7 @@ How to parse C programs with clang: A tutorial in 9 parts
 
 
 
-<p class="by">written by <a href="mailto:nicolasweber@gmx.de">Nicolas
+<p class="by">written by <a href="mailto:nicolasweber@gmx.de">Nico
 Weber</a></p>
 
 
@@ -53,7 +53,7 @@ input file lists required.
 A short word of warning: clang is still work in prograss. C++-support is not
 yet anywhere near completion, and clang does not have a stable API, so this
 tutorial might not be completely up-to-date. The last time I checked that all
-programs work was **Aug 26, 2008**.
+programs work was **Sep 07, 2008**.
 
 Clang works on all platforms. In this tutorial I assume that you have some
 Unix-based platform, but in principle everything should work on Windows, too.
@@ -458,6 +458,21 @@ with `SourceLocation` for full-featured file identification. `SourceManager`
 has a method `isInSystemHeader(loc)` that we can use. (XXX: difference between
 file ids and macro ids.)
 
+<div class="sidebar">
+<h1><code>SourceLocation</code>s, oh my!</h1>
+<p>Macro- vs FileIDs, physical vs logical locations, validity, include loc</p>
+<p>file id: part index into buffer list (14 bit), part index into that buffer
+(17 bit)</p>
+<p>macro id: 20 bit macro id, 9 bit physical offset (signed!), 2 bit unused</p>
+<p>the 20 bit refer to a struct that has a virtual loc, a file loc that
+specifies where the macro is expanded, and a physical loc, a file loc that
+specifies where the character data for the tokens came from.</p>
+<p>Perhaps a few words about <code>MemoryBuffer</code>s?</p>
+<p>File locations are both pysical and logical at the same time</p>
+<p>Macro physical locs need the physical offset from the macro loc</p>
+<p>logical: subject to #line</p>
+</div>
+
 All in all, our `ActOnDeclarator()` method looks like this:
 
     virtual Action::DeclTy *
@@ -643,11 +658,11 @@ thus:
 
 Nice output ? -- html output
 
-Also take care of `static`s and print the name of the defining file.
+Also take care of `static`s and print the name of the declaring file.
 
 `TranslationUnit` contains a whole AST (i.e. all toplevel decls)
 
-See `tut07_sema.cpp`, `input05.c`
+See `tut07_sema.cpp`, `input05.c`, [`input05.html`](input05.html)
 
 [llvm-commandline]: http://llvm.org/docs/CommandLine.html
 
@@ -742,6 +757,8 @@ analysis lib is cool and wasn't covered at all.
 questions
 ---
 
+* Why is the physical macro offset needed in `getPhysicalLoc()` but no in
+  `getLogicalLoc()`?
 * libDriver: `DefineBuiltinMacro`, `DeclPrinter`,
              pp construction (inter alia header search),
              perhaps standard options (-D, -I, ?)
