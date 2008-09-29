@@ -51,6 +51,7 @@ public:
       for (; VD; VD = cast_or_null<VarDecl>(VD->getNextDeclarator())) {
         if (VD->isFileVarDecl() && VD->getStorageClass() != VarDecl::Extern) {
           FullSourceLoc loc(D->getLocation(), *sm);
+          cerr << endl;
           loc.Dump();
           bool isStatic = VD->getStorageClass() == VarDecl::Static;
 

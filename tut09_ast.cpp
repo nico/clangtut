@@ -260,9 +260,6 @@ bool compile(ostream& out, const string& inFile)
   // Create Preprocessor object
   PPContext context;
 
-  // XXX: move warning initialization to libDriver
-  context.diags.setDiagnosticMapping(
-      diag::warn_pp_undef_identifier,diag::MAP_IGNORE);
   addIncludesAndDefines(context);
 
 

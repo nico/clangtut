@@ -171,7 +171,7 @@ So, to build a `Preprocessor` object, the following code is required:
 
 Because we will need a `Preprocessor` object in all tutorials, I've moved this
 initialization code to its own file, `PPContext.h`. With this file,
-`tut01_pp.cpp` is quite short (take your time and take a look at that two
+`tut01_pp.cpp` is quite short (take your time and take a look at those two
 files).
 
 So, all that is left is to compile `tut01_pp.cpp` and you're done with part 1!
@@ -339,6 +339,15 @@ already work. See `tut03_pp.cpp` for the complete program.
 This actually outputs all the tokens found in the included file, so the output
 is quite long.
 
+However, you will probably get warnings similar to
+
+    /usr/include/sys/cdefs.h:137:29: warning: "__MWERKS__" is not defined, evaluates to 0
+    #if defined(__MWERKS__) && (__MWERKS__ > 0x2400)
+
+While this is a valid warning, `gcc` or command-line `clang` do not print it
+by default. To suppress this warning, I have added a line to `PPContext.h`
+that tells clang to ignore this kind of warning.
+
 With some effort, it is possible to turn this into a "real" preprocessor. See
 `Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
 done. (XXX: link clang sources to their declarations in clang's websvn)
@@ -470,7 +479,25 @@ specifies where the character data for the tokens came from.</p>
 <p>Perhaps a few words about <code>MemoryBuffer</code>s?</p>
 <p>File locations are both pysical and logical at the same time</p>
 <p>Macro physical locs need the physical offset from the macro loc</p>
-<p>logical: subject to #line</p>
+<p>logical: subject to #line. <b>&lt;- not true!</b></p>
+
+Defined in a file vs defined in a macro. Linked chain?
+
+Comment in SourceManager.h is flat out wrong. Logical/physical not about
+\#line, but about macro substitutions. Logical is where the macro is in the
+file, physical is where in the macro definition stuff happens (?).
+
+  /// MacroIDInfo - Macro SourceLocations refer to these records by their ID.
+  /// Each MacroIDInfo encodes the Instantiation location - where the macro was
+  /// instantiated, and the PhysicalLoc - where the actual character data for
+  /// the token came from.  An actual macro SourceLocation stores deltas from
+  /// these positions.
+
+That seems to be right.
+
+Somewhere else: Physical is were the token comes from, virt where it should
+come from.
+
 </div>
 
 All in all, our `ActOnDeclarator()` method looks like this:

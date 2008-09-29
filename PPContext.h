@@ -24,7 +24,13 @@ struct PPContext {
       target(clang::TargetInfo::CreateTargetInfo(triple)),
       headers(fm),
       pp(diags, opts, *target, sm, headers)
-  {}
+  {
+    // Configure warnings to be similar to what command-line `clang` outputs
+    // (see tut03).
+    // XXX: move warning initialization to libDriver
+    using namespace clang;
+    diags.setDiagnosticMapping(diag::warn_pp_undef_identifier,diag::MAP_IGNORE);
+  }
 
   ~PPContext()
   {
