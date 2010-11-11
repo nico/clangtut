@@ -9,7 +9,7 @@ CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 # clangRewrite required in tut09
 LDFLAGS= `$(LLVMCONFIG) --ldflags`
 LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema -lclangAST \
-			 -lclangDriver -lclangFrontend -lclangParse -lclangLex -lclangBasic \
+			 -lclangFrontend -lclangParse -lclangLex -lclangBasic \
 			 -lLLVMCore -lLLVMSupport -lLLVMSystem \
 			 -lLLVMBitWriter -lLLVMBitReader -lLLVMCodeGen -lLLVMAnalysis \
 			 -lLLVMTarget -lLLVMMC
@@ -21,6 +21,8 @@ clean:
 	rm -rf tut01_pp.o tut02_pp.o tut03_pp.o tut04_parse.o tut05_parse.o
 	rm -rf tut06_sema.o tut07_sema.o tut08_ast.o tut09_ast.o
 	rm -rf input07_1.o input07_2.o input07.html
+	rm -rf Markdown.pl Markdown_1.0.1 Markdown_1.0.1.zip
+	rm -rf SmartyPants.pl SmartyPants_1.5.1 SmartyPants_1.5.1.zip
 
 tut09: tut09_ast.o
 	g++ $(LDFLAGS) -o tut09 tut09_ast.o $(LIBS)
@@ -67,21 +69,33 @@ runtest: all
 	cat input07.html
 
 # XXX: SmartyPants also converts "" in program code; it shouldn't
-html: tut.markdown tut.css
+html: tut.markdown tut.css Markdown.pl SmartyPants.pl
 	echo '<!DOCTYPE html>' > tut.html
 	echo '<html><head>' >> tut.html
 	echo '<meta charset="UTF-8"><title>clang tutorial</title>' >> tut.html
 	echo '<link rel="stylesheet" href="tut.css" type="text/css">' >> tut.html
 	#echo '<style type="text/css" src="tut.css"></style>' >> tut.html
 	echo '</head><body><div class="page">' >> tut.html
-	python linkify.py tut.markdown | Markdown.pl --html4tags | SmartyPants.pl >> tut.html
+	python linkify.py tut.markdown | ./Markdown.pl --html4tags | ./SmartyPants.pl >> tut.html
 	echo '</div><div class="footer">' >> tut.html
 	echo 'Last modified on' >> tut.html
 	date >> tut.html
 	echo '</div></body></html>' >> tut.html
 
+Markdown.pl:
+	curl -O http://daringfireball.net/projects/downloads/Markdown_1.0.1.zip
+	unzip Markdown_1.0.1.zip Markdown_1.0.1/Markdown.pl
+	mv Markdown_1.0.1/Markdown.pl .
+	chmod +x Markdown.pl  # what could possibly go wrong
+
+SmartyPants.pl:
+	curl -O http://daringfireball.net/projects/downloads/SmartyPants_1.5.1.zip
+	unzip SmartyPants_1.5.1.zip SmartyPants_1.5.1/SmartyPants.pl
+	mv SmartyPants_1.5.1/SmartyPants.pl .
+	chmod +x SmartyPants.pl  # what could possibly go wrong
+
 viewhtml: html
-	open -a Safari tut.html
+	open tut.html
 
 deploy: test html
 	rm -rf clangtut
