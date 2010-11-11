@@ -50,10 +50,15 @@ file is 2.4 mb! (vim uses lots of globals.) Furthermore, the program can be
 used with any make-based program out of the box -- no change to Makefiles or
 input file lists required.
 
-A short word of warning: clang is still work in prograss. C++-support is not
-yet anywhere near completion, and clang does not have a stable API, so this
-tutorial might not be completely up-to-date. The last time I checked that all
-programs work was **Sep 07, 2008**.
+Note that one of the goals of this tutorial is to give you an idea how clang's
+internal architecture works. I directly use clang's internal classes, which do
+not have a stable API, so this tutorial might not be completely up-to-date. The
+last time I checked that all programs work was **Nov 10, 2010**, with the clang
+code that's in the **LLVM 2.8** release.
+
+Nowadays, clang also has a [stable API][clang-api] that exposes a subset of
+clang's functionality. Reading this tutorial will still help you understand
+that API better.
 
 Clang works on all platforms. In this tutorial I assume that you have some
 Unix-based platform, but in principle everything should work on Windows, too.
@@ -63,13 +68,15 @@ Unix-based platform, but in principle everything should work on Windows, too.
 [cscout-paper]: http://www.spinellis.gr/pubs/jrnl/2003-TSE-Refactor/html/Spi03r.html
 [gtk-refactor]: http://people.imendio.com/richard/gtk-rewriter/
 [ctags]: http://ctags.sourceforge.net/
+[clang-api]: http://clang.llvm.org/doxygen/group__CINDEX.html
 
 
 Getting started
 ---
 
-There is no official release of clang yet, you have to get it from SVN and
-build it for yourself. Luckily, this is easy:
+You can get the source code of the 2.8 release at the
+[llvm releases page][llvm-releases]. But it's just as easy and more up-to-date
+to get it from SVN and build it for yourself:
 
     svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
     cd llvm
@@ -86,12 +93,12 @@ too. You'll be missing some visualization functionality, but we won't use that
 in this tutorial anyway.
 
 Note that this does a debug build of llvm and clang. The resulting libraries
-and binaries will end up in `llvm/Debug` and are a lot slower than the release
-binaries (which you get when running `./configure --enable-optimized`).
+and binaries will end up in `llvm/Debug+Asserts` and are a lot slower than the
+release binaries (which you get when running `./configure --enable-optimized`).
     
 You can find more information in clang's [official getting started
 guide](http://clang.llvm.org/get_started.html). By the way, if you're using
-Time Machine, you probably want to emit the llvm folder from your backup --
+Time Machine, you probably want to omit the llvm folder from your backup --
 else, 700mb get backed up every time you update and recompile llvm and clang.
 
 XXX: [Browse clang source](https://llvm.org/svn/llvm-project/cfe/trunk/).
@@ -110,6 +117,7 @@ syntax highlighting only?)
 -->
 
 [graphviz]: http://pixelglow.com/graphviz/
+[llvm-releases]: http://llvm.org/releases/download.html#2.8
 
 Tutorial 01: The bare minimum
 ---
@@ -128,27 +136,32 @@ anything useful, it only constructs a `Preprocessor` and exits again.
 The constructor of `Preprocessor` takes no less than 5 arguments: A
 `Diagnostic` object, a `LangOptions` object, a `TargetInfo` object, a
 `SourceManager` object, and finally a `HeaderSearch` object. Let's break down
-what those objects are good for, and how we can build them.
+what these objects are good for, and how we can build them.
 
 First is `Diagnostic`. This is used by clang to report errors and warnings to
 the user. A `Diagnostic` object can have a `DiagnosticClient`, which is
 responsible for actually displaying the messages to the user. We will use
-clang's built-in `TextDiagnostics` class, which writes errors and warnings to
-the console (it's the same `DiagnosticClient` that is used by the `clang`
-binary).
+clang's built-in `TextDiagnosticPrinter` class, which writes errors and
+warnings to an output stream -- we will pass `llvm::outs()`, which corresponds
+to standard output (it's the same `DiagnosticClient` that is used by the
+`clang` binary).  `TextDiagnosticPrinter` also gets a `DiagnosticOptions`
+object, which is just a collection of `bool`s that control how diagnostics are
+reported (you can use this to display pedantic warnings for example).
 
 Next up is `LangOptions`. This class lets you configure if you're compiling C
 or C++, and which language extensions you want to allow. Constructing this
 object is easy, as its constructor does not take any parameters.
 
 The `TargetInfo` is easy, too, but we need to call a factory method as the
-constructor is private. The factory method takes a "host triple" as parameter
-that defines the architecture clang should compile for, such as
-"i386-apple-darwin". We will pass `LLVM_HOST_TRIPLE`, which contains the host
-triple describing the machine llvm was compiled on.  But in principle, you can
-use clang as a [cross-compiler][] very easily, too.  The `TargetInfo` object
-is required so that the preprocessor can add target-specific defines, for
-example `__APPLE__`. You need to delete this object at the end of the program.
+constructor is private. The factory method takes a `Diagnostic` object, and a
+`TargetOptions` parameter that defines the architecture clang should compile
+for, and similar options. The only required field is `Triple`, which for example
+looks like "i386-apple-darwin". We will pass `LLVM_HOST_TRIPLE`, which
+contains the host triple describing the machine llvm was compiled on.  But in
+principle, you can use clang as a [cross-compiler][] very easily, too.  The
+`TargetInfo` object is required so that the preprocessor can add
+target-specific defines, for example `__APPLE__`. You need to delete the
+`TargetInfo` object at the end of the program.
 
 `SourceManager` is used by clang to load and cache source files. Again, its
 constructor takes no arguments.
@@ -158,10 +171,13 @@ Finally, the constructor of `HeaderSearch` requires a `FileManager`.
 
 So, to build a `Preprocessor` object, the following code is required:
 
-    TextDiagnostics diagClient;
-    Diagnostic diags(&diagClient);
+    DiagnosticOptions diaOptions;
+    // Diagnostic takes ownership of its client.
+    Diagnostic diags(new TextDiagnosticPrinter(llvm::outs(), diagOptions);
     LangOptions opts;
-    TargetInfo* target = TargetInfo::CreateTargetInfo(LLVM_HOST_TRIPLE);
+    TargetOptions targetOptions;
+    targetOptions.Triple = LLVM_HOST_TRIPLE;
+    TargetInfo* target = TargetInfo::CreateTargetInfo(diags, targetOptions);
     SourceManager sm;
     FileManager fm;
     HeaderSearch headers(fm);
@@ -174,15 +190,19 @@ initialization code to its own file, `PPContext.h`. With this file,
 `tut01_pp.cpp` is quite short (take your time and take a look at those two
 files).
 
+Instead of manually deleting `target`, I use an `OwningPointer` to hold the
+`TargetInfo` object. `OwningPointer` is one of llvm's smart pointer classes
+that delete their pointee when they go out of scope (see [raii][]).
+
 So, all that is left is to compile `tut01_pp.cpp` and you're done with part 1!
 This is how you do it:
 
     g++ -I/Users/$USER/src/llvm/tools/clang/include \
-      `/Users/$USER/src/llvm/Debug/bin/llvm-config --cxxflags` \
+      `/Users/$USER/src/llvm/Debug+Asserts/bin/llvm-config --cxxflags` \
       -fno-rtti -c tut01_pp.cpp
-    g++ `/Users/$USER/src/llvm/Debug/bin/llvm-config --ldflags` \
-      -lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter \
-      -lclangBasic -lclangLex -lclangDriver \
+    g++ `/Users/$USER/src/llvm/Debug+Asserts/bin/llvm-config --ldflags` \
+      -lLLVMSupport -lLLVMSystem -lLLVMBitReader -lLLVMBitWriter -lLLVMMC \
+      -lclangBasic -lclangLex -lclangFrontend \
       -o tut01 tut01_pp.o
 
 You need to compile with `-fno-rtti`, because clang is compiled that way, too.
@@ -204,6 +224,7 @@ program:
 Sure enough, it doesn't do anything yet. Let's tackle this next.
 
 [cross-compiler]: http://en.wikipedia.org/wiki/Cross_compile
+[raii]: http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization
 
 
 Tutorial 02: Processing a file
