@@ -7,6 +7,7 @@ using namespace clang;
 
 int main(int argc, char* argv[])
 {
+cout << LLVM_HOSTTRIPLE << endl;
   if (argc != 2) {
     cerr << "No filename given" << endl;
     return EXIT_FAILURE;
@@ -21,16 +22,18 @@ int main(int argc, char* argv[])
     cerr << "Failed to open \'" << argv[1] << "\'";
     return EXIT_FAILURE;
   }
-  context.sm.createMainFileID(File, SourceLocation());
-  context.pp.EnterMainSourceFile();
+  context.sm.createMainFileID(File);
+  context.pp->EnterMainSourceFile();
 
   // Parse it
   Token Tok;
+  context.diagClient->BeginSourceFile(context.opts, context.pp.get());
   do {
-    context.pp.Lex(Tok);
+    context.pp->Lex(Tok);
     if (context.diags.hasErrorOccurred())
       break;
-    context.pp.DumpToken(Tok);
+    context.pp->DumpToken(Tok);
     cerr << endl;
   } while (Tok.isNot(tok::eof));
+  context.diagClient->EndSourceFile();
 }

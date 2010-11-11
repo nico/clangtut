@@ -235,11 +235,11 @@ We want to change it so that it feeds C files into the preprocessor object. To
 add an input file to the preprocessor, we call:
 
     const FileEntry* file = fm.getFile("filename.c");
-    sm.createMainFileID(file, SourceLocation());
-    pp.EnterMainSourceFile();
+    sm.createMainFileID(file);
+    pp->EnterMainSourceFile();
 
 This creates a file id for the input file and stores it as the "main file" in
-the `SourceManager` object. The second line tells the preprocessor to enter
+the `SourceManager` object. The third line tells the preprocessor to enter
 the `SourceManager`'s main file into its file list; the call does some other
 setup stuff (such as creating a buffer with predefines), too.
 
@@ -247,13 +247,19 @@ Now that a source file is added, we can ask the preprocessor to preprocess it
 and read the preprocessed input tokens:
 
     Token Tok;
+    context.diagClient->BeginSourceFile(context.opts, context.pp.get());
     do {
-      pp.Lex(Tok);  // read one token
+      context.pp->Lex(Tok);
       if (context.diags.hasErrorOccurred())  // stop lexing/pp on error
         break;
-      pp.DumpToken(Tok);  // outputs to cerr
+      context.pp->DumpToken(Tok);
       cerr << endl;
     } while (Tok.isNot(tok::eof));
+    context.diagClient->EndSourceFile();
+
+We need to inform the diagnostic client of the currently active file, so that it
+can print the correct file name when it prints a diagnostic. This is what the
+calls to `BeginSourceFile()` and `EndSourceFile()` do.
 
 See `tut02_pp.cpp` for the complete program. Note that this is a very complete
 preprocessor, it handles all kinds of corner cases correctly already. It also
@@ -263,11 +269,6 @@ After building, play around with it a bit. For example, here's its output when
 `input01.c` is given as an input file:
 
     $ ./tut02 input01.c 
-    typedef 'typedef'
-    char 'char'
-    star '*'
-    identifier '__builtin_va_list'
-    semi ';'
     int 'int'
     identifier 'main'
     l_paren '('
@@ -283,7 +284,7 @@ After building, play around with it a bit. For example, here's its output when
     int 'int'
     identifier 'b'
     equal '='
-    input01.c:5:13: warning: "/*" within block comment
+    input01.c:5:13: warning: '/*' within block comment
       /* Nested /* comments */ 12; // are handled correctly
                 ^
     numeric_constant '12'
@@ -291,16 +292,27 @@ After building, play around with it a bit. For example, here's its output when
     int 'int'
     identifier 'c'
     equal '='
-    numeric_constant '12'
+    numeric_constant '18'
     semi ';'
     r_brace '}'
     eof ''
 
-Note the `typedef char* __builtin_va_list;` that gets added through the
-predefine buffer.  Also note the nicely formatted warning message
-`TextDiagnostics` gives us for free.  You can also try feeding errorneous
-programs to `tut02`. As you'll see, some errors are detected, while others are
-not (yet). For example, try `input02.c`.
+
+Note the nicely formatted warning message `TextDiagnosticPrinter` gives us for
+free.  You can also try feeding errorneous programs to `tut02`. As you'll see,
+some errors are detected, while others are not (yet). For example, try
+`input02.c`.
+
+Also note that this produces token `18` after `c` even on Apple systems (`input01.c` contains
+
+    #ifdef __APPLE__
+      12
+    #else
+      18
+    #endif
+
+). This is because we don't add the predefines returned by
+`TargetInfo::getTargetDefines()` to the preprocessor yet.
 
 
 Tutorial 03: Include files
@@ -373,6 +385,12 @@ With some effort, it is possible to turn this into a "real" preprocessor. See
 `Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
 done. (XXX: link clang sources to their declarations in clang's websvn)
 
+
+<!--
+FIXME: Consider using
+include/clang/Frontend/Utils.h:/// InitializePreprocessor
+instead!
+-->
 
 Tutorial 04: Parsing the file
 ---
@@ -650,6 +668,10 @@ Our program is now already good enough to handle real-life code (and we're
 still well below 50 lines), but it's interface is not. Let's tackle this next.
 
 [sane-decl]: http://lists.cs.uiuc.edu/pipermail/cfe-dev/2008-August/002589.html
+
+<!--
+FIXME: This might be a good point to talk about Frontend/CompilerInstance.h
+-->
 
 
 Tutorial 07: Support for real programs
