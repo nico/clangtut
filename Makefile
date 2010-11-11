@@ -1,5 +1,5 @@
-LLVMHOME=/Users/nico/src/llvm-svn
-LLVMCONFIG=$(LLVMHOME)/Debug/bin/llvm-config
+LLVMHOME=/Users/thakis/src/llvm-rw
+LLVMCONFIG=$(LLVMHOME)/Debug+Asserts/bin/llvm-config
 CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 		 -fno-rtti \
 		 `$(LLVMCONFIG) --cxxflags`
@@ -8,11 +8,11 @@ CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 # clangAST and clangSema required starting from tut06
 # clangRewrite required in tut09
 LDFLAGS= `$(LLVMCONFIG) --ldflags`
-LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema \
-			 -lclangDriver -lclangAST -lclangParse -lclangLex -lclangBasic \
+LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema -lclangAST \
+			 -lclangDriver -lclangFrontend -lclangParse -lclangLex -lclangBasic \
 			 -lLLVMCore -lLLVMSupport -lLLVMSystem \
 			 -lLLVMBitWriter -lLLVMBitReader -lLLVMCodeGen -lLLVMAnalysis \
-			 -lLLVMTarget
+			 -lLLVMTarget -lLLVMMC
 
 all: tut01 tut02 tut03 tut04 tut05 tut06 tut07 tut08 tut09
 
@@ -101,5 +101,6 @@ tut05_parse.o: tut05_parse.cpp PPContext.h
 tut04_parse.o: tut04_parse.cpp PPContext.h
 tut03_pp.o: tut03_pp.cpp PPContext.h
 tut02_pp.o: tut02_pp.cpp PPContext.h
-tut01_pp.o: tut01_pp.cpp
+tut01_pp.o: tut01_pp.cpp PPContext.h
 
+# vim:set ts=2:
