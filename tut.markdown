@@ -312,7 +312,8 @@ Also note that this produces token `18` after `c` even on Apple systems (`input0
     #endif
 
 ). This is because we don't add the predefines returned by
-`TargetInfo::getTargetDefines()` to the preprocessor yet.
+`TargetInfo::getTargetDefines()` to the preprocessor yet. We fill fix this and
+more in the next part.
 
 
 Tutorial 03: Include files
@@ -323,12 +324,7 @@ that it does not work. For example, if we feed it `input03.c`, we get an
 error:
 
     $ ./tut02 input03.c 
-    typedef 'typedef'
-    char 'char'
-    star '*'
-    identifier '__builtin_va_list'
-    semi ';'
-    input03.c:1:10: error: 'stdio.h' file not found
+    input03.c:1:10: fatal error: 'stdio.h' file not found
     #include <stdio.h>
              ^
 
@@ -341,15 +337,46 @@ method takes a list of `DirectoryLookup`s (user headers at the front, system
 headers after them), an index that specifies the first system header, and a
 flag if the current directory should be searched for include files as well.
 
-However, clang does luckily include a helper class that makes setting up
-search paths much easier. This helper class is called `InitHeaderSearch`. To
+Luckily, clang includes a helper function that makes setting up search paths
+much easier. This helper function is called `ApplyHeaderSearchOptions`. To
 add the default system header paths to clang, you use the following code:
 
-    InitHeaderSearch init(headers);
-    init.AddDefaultSystemIncludePaths(opts);
-    init.Realize();  // this actually sends the header list to HeaderSearch
+    HeaderSearchOptions headersOpts;
+    ApplyHeaderSearchOptions(
+       context.headers, headersOpts, context.opts, context.target->getTriple());
 
-With this tiny change, `#include` directives that include system headers do
+This adds all standard include paths to the `HeaderSearch` object passed in the
+first parameter, based on the current language options and the target triple.
+You can use the `HeaderSearchOptions` parameter to fine-tune the behavior of
+this function, you could for example add custom include paths.
+
+If we add just these three lines to our source, we now get the following output:
+
+    $ ./tut03 input03.c
+    In file included from input03.c:1:
+    In file included from /usr/include/stdio.h:64:
+    In file included from /usr/include/_types.h:27:
+    In file included from /usr/include/sys/_types.h:32:
+    /usr/include/sys/cdefs.h:507:4: error: #error Unknown architecture
+    #  error Unknown architecture
+
+The `#include` was processed correctly! But the system header included by
+`input03.c` relies on a few standard macros such as `__i386__` being defined
+(at least on my system), and we don't add these defines yet.
+
+Clang contains a function to add all standard system defines. It's called like
+this:
+
+    PreprocessorOptions ppOpts;
+    FrontendOptions feOpts;
+    InitializePreprocessor(*context.pp, ppOpts, headersOpts, feOpts);
+
+You can use the `PreprocessorOptions` object to add additional macros that
+should be predefined, and for other, more arcane, things. The `FrontendOptions`
+object cannot be used for anything sensible, the parameter will hopefully be
+removed at some point in the future.
+
+With these two changes, `#include` directives that include system headers do
 already work. See `tut03_pp.cpp` for the complete program.
 
     $ ./tut03 input03.c
@@ -372,25 +399,12 @@ already work. See `tut03_pp.cpp` for the complete program.
 This actually outputs all the tokens found in the included file, so the output
 is quite long.
 
-However, you will probably get warnings similar to
-
-    /usr/include/sys/cdefs.h:137:29: warning: "__MWERKS__" is not defined, evaluates to 0
-    #if defined(__MWERKS__) && (__MWERKS__ > 0x2400)
-
-While this is a valid warning, `gcc` or command-line `clang` do not print it
-by default. To suppress this warning, I have added a line to `PPContext.h`
-that tells clang to ignore this kind of warning.
+Note that this version evaluates the `#ifdef __APPLE__` in `input01.c` correctly. You can also see the system-specific predefines that we added at
+the top of the output.
 
 With some effort, it is possible to turn this into a "real" preprocessor. See
-`Driver/PrintPreprocessedOutput.cpp` in clang's source for how this could be
+`Frontend/PrintPreprocessedOutput.cpp` in clang's source for how this could be
 done. (XXX: link clang sources to their declarations in clang's websvn)
-
-
-<!--
-FIXME: Consider using
-include/clang/Frontend/Utils.h:/// InitializePreprocessor
-instead!
--->
 
 Tutorial 04: Parsing the file
 ---
@@ -499,7 +513,7 @@ Finally, we are not interested in globals from system headers. To check for
 this, we need to know which file the declarator was found in. clang uses the
 class `SourceLocation` to represent this information. Since there are lots of
 `SourceLocation`s (every identifier needs to store where it is from, for
-example), some effort has been done to make `SourceLocation` small -- it's
+example), some effort has been made to make `SourceLocation` small -- it's
 only 32 bit, as small as an `int`. As a result, a `SourceLocation` alone
 cannot tell you much, you also need a `SourceManager`, which works together
 with `SourceLocation` for full-featured file identification. `SourceManager`

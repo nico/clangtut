@@ -7,7 +7,6 @@ using namespace clang;
 
 int main(int argc, char* argv[])
 {
-cout << LLVM_HOSTTRIPLE << endl;
   if (argc != 2) {
     cerr << "No filename given" << endl;
     return EXIT_FAILURE;
