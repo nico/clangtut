@@ -35,11 +35,13 @@ using namespace std;
 class RenameMethodConsumer : public clang::ASTConsumer {
   clang::Rewriter rewriter_;
   clang::ASTContext* context_;
+  clang::Diagnostic &diags_;
  public:
+  RenameMethodConsumer(clang::Diagnostic& d) : diags_(d) {}
   void HandleTopLevelSingleDecl(clang::Decl *D);
 
   // ASTConsumer
-  virtual void Initialize(clang::ASTContext &Context) { context_ = &Context; }
+  virtual void Initialize(clang::ASTContext &Context);
   virtual void HandleTopLevelDecl(clang::DeclGroupRef D) {
     for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
       HandleTopLevelSingleDecl(*I);
@@ -47,7 +49,25 @@ class RenameMethodConsumer : public clang::ASTConsumer {
   virtual void HandleTranslationUnit(clang::ASTContext &C);
 };
 
+void RenameMethodConsumer::Initialize(clang::ASTContext &Context) {
+  context_ = &Context;
+  rewriter_.setSourceMgr(Context.getSourceManager(), Context.getLangOptions());
+}
+
 void RenameMethodConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
+  if (diags_.hasErrorOccurred())
+    return;
+
+  clang::SourceLocation Loc = D->getLocation();
+  Loc = context_->getSourceManager().getInstantiationLoc(Loc);
+  
+  // Only rewrite stuff in the main file for now.
+  if (!context_->getSourceManager().isFromMainFile(Loc))
+    return;
+
+  // We might want to process this decl. We will probably want to check if
+  // it's a function decl (this covers c++ methods too, but not objc functions),
+  // and then recurse into all statements in the function's body.
 }
 
 void RenameMethodConsumer::HandleTranslationUnit(clang::ASTContext &C) {
@@ -118,7 +138,7 @@ int main(int argc, char* argv[])
       selectorTable,
       builtinContext,
       /*size_reserve=*/0);
-  RenameMethodConsumer astConsumer;
+  RenameMethodConsumer astConsumer(diags);
 
   diagClient->BeginSourceFile(inv.getLangOpts(), &pp);
   clang::ParseAST(pp, &astConsumer, astContext, /*PrintStats=*/true);
