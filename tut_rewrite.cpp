@@ -62,6 +62,7 @@ void RenameMethodConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
   Loc = context_->getSourceManager().getInstantiationLoc(Loc);
   
   // Only rewrite stuff in the main file for now.
+  // FIXME(thakis): Will want to rewrite stuff in headers too at some point.
   if (!context_->getSourceManager().isFromMainFile(Loc))
     return;
 
@@ -123,20 +124,20 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
   sm.createMainFileID(File);
-  // Do _not_ call EnterMainSourceFile() -- the parser does this.
+  // Do _not_ call EnterMainSourceFile() -- the parser does this
+
+  // Register built-ins (__builtin_strstr etc)
+  pp.getBuiltinInfo().InitializeBuiltins(pp.getIdentifierTable(),
+                                         pp.getLangOptions().NoBuiltin);
 
   // Parse it
-  clang::IdentifierTable identifierTable(inv.getLangOpts());
-  clang::SelectorTable selectorTable;
-
-  clang::Builtin::Context builtinContext(*target);
   clang::ASTContext astContext(
-      inv.getLangOpts(),
-      sm,
-      *target,
-      identifierTable,
-      selectorTable,
-      builtinContext,
+      pp.getLangOptions(),
+      pp.getSourceManager(),
+      pp.getTargetInfo(),
+      pp.getIdentifierTable(),
+      pp.getSelectorTable(),
+      pp.getBuiltinInfo(),
       /*size_reserve=*/0);
   RenameMethodConsumer astConsumer(diags);
 
