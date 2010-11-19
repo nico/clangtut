@@ -1,6 +1,11 @@
+/*
+# FIXME(thakis): Why is the clang headers include path not set by default?
+./tut_rewrite -x c++ tut_rewrite.cpp \
+    -I/Users/nico/src/llvm-2.8/tools/clang/include/ \
+    `/Users/nico/src/llvm-2.8/Release/bin/llvm-config --cxxflags` \
+    -I/Users/nico/src/llvm-2.8/Release/lib/clang/2.8/include
+*/
 #include <iostream>
-#include <string>
-using namespace std;
 
 #include "llvm/Config/config.h"
 
@@ -88,7 +93,7 @@ int main(int argc, char* argv[])
       bootstrapDiag);
   if (inv.getFrontendOpts().Inputs.size() < 1 ||
       inv.getFrontendOpts().Inputs[0].second == "-") {
-    cerr << "No filename given" << endl;
+    std::cerr << "No filename given" << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -96,6 +101,10 @@ int main(int argc, char* argv[])
   clang::DiagnosticClient* diagClient =  // Owned by |diags|.
       new clang::TextDiagnosticPrinter(llvm::outs(), inv.getDiagnosticOpts());
   clang::Diagnostic diags(diagClient);
+
+  // Called by CompilerInstance::createDiagnostics(), which does some stuff
+  // we don't want (?). FIXME(thakis): Use CompilerInstance instead?
+  clang::ProcessWarningOptions(diags, inv.getDiagnosticOpts());
 
   llvm::OwningPtr<clang::TargetInfo> target(
       clang::TargetInfo::CreateTargetInfo(diags, inv.getTargetOpts()));
@@ -119,8 +128,8 @@ int main(int argc, char* argv[])
   const clang::FileEntry* File =
     fm.getFile(inv.getFrontendOpts().Inputs[0].second);
   if (!File) {
-    cerr << "Failed to open \'" << inv.getFrontendOpts().Inputs[0].second
-         << "\'";
+    std::cerr << "Failed to open \'" << inv.getFrontendOpts().Inputs[0].second
+              << "\'";
     return EXIT_FAILURE;
   }
   sm.createMainFileID(File);
@@ -142,7 +151,7 @@ int main(int argc, char* argv[])
   RenameMethodConsumer astConsumer(diags);
 
   diagClient->BeginSourceFile(inv.getLangOpts(), &pp);
-  clang::ParseAST(pp, &astConsumer, astContext, /*PrintStats=*/true);
+  clang::ParseAST(pp, &astConsumer, astContext, /*PrintStats=*/false);
   diagClient->EndSourceFile();
 }
 
