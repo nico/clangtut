@@ -2,7 +2,8 @@
 # FIXME(thakis): Why is the clang headers include path not set by default?
 ./tut_rewrite -x c++ tut_rewrite.cpp \
     -I/Users/nico/src/llvm-2.8/tools/clang/include/ \
-    `/Users/nico/src/llvm-2.8/Release/bin/llvm-config --cxxflags` \
+    `/Users/nico/src/llvm-2.8/Release/bin/llvm-config --cxxflags | \
+        sed s/-fno-exceptions//` \
     -I/Users/nico/src/llvm-2.8/Release/lib/clang/2.8/include
 */
 #include <iostream>
@@ -56,7 +57,8 @@ class RenameMethodConsumer : public clang::ASTConsumer {
 
 void RenameMethodConsumer::Initialize(clang::ASTContext &Context) {
   context_ = &Context;
-  rewriter_.setSourceMgr(Context.getSourceManager(), Context.getLangOptions());
+  rewriter_.setSourceMgr(Context.getSourceManager(),
+                         Context.getLangOptions());
 }
 
 void RenameMethodConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
