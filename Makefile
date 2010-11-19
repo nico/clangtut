@@ -9,9 +9,11 @@ CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 # clangParse required starting from tut04
 # clangAST and clangSema required starting from tut06
 # clangRewrite required in tut09
+# clangDriver, clangSerialization are only required for the ci stuff.
 LDFLAGS= `$(LLVMCONFIG) --ldflags`
 LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema -lclangAST \
-			 -lclangFrontend -lclangParse -lclangLex -lclangBasic \
+			 -lclangFrontend -lclangParse -lclangLex -lclangBasic -lclangDriver \
+			 -lclangSerialization \
 			 -lLLVMCore -lLLVMSupport -lLLVMSystem \
 			 -lLLVMBitWriter -lLLVMBitReader -lLLVMCodeGen -lLLVMAnalysis \
 			 -lLLVMTarget -lLLVMMC
@@ -43,6 +45,9 @@ tut05: tut05_parse.o
 
 tut04: tut04_parse.o
 	g++ $(LDFLAGS) -o tut04 tut04_parse.o $(LIBS)
+
+tut03_ci: tut03_ci.o
+	g++ $(LDFLAGS) -o tut03 tut03_ci.o $(LIBS)
 
 tut03: tut03_pp.o
 	g++ $(LDFLAGS) -o tut03 tut03_pp.o $(LIBS)
@@ -115,6 +120,7 @@ tut07_sema.o: tut07_sema.cpp PPContext.h
 tut06_sema.o: tut06_sema.cpp PPContext.h
 tut05_parse.o: tut05_parse.cpp PPContext.h
 tut04_parse.o: tut04_parse.cpp PPContext.h
+tut03_ci.o: tut03_ci.cpp
 tut03_pp.o: tut03_pp.cpp PPContext.h
 tut02_pp.o: tut02_pp.cpp PPContext.h
 tut01_pp.o: tut01_pp.cpp PPContext.h

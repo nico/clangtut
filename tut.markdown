@@ -53,7 +53,7 @@ input file lists required.
 Note that one of the goals of this tutorial is to give you an idea how clang's
 internal architecture works. I directly use clang's internal classes, which do
 not have a stable API, so this tutorial might not be completely up-to-date. The
-last time I checked that all programs work was **Nov 10, 2010**, with the clang
+last time I checked that all programs work was **Nov 13, 2010**, with the clang
 code that's in the **LLVM 2.8** release.
 
 Nowadays, clang also has a [stable API][clang-api] that exposes a subset of
