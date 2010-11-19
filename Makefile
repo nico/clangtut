@@ -21,12 +21,15 @@ LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema -lclangAST \
 all: tut01 tut02 tut03 tut04 tut05 tut06 tut07 tut08 tut09
 
 clean:
-	rm -rf tut01 tut02 tut03 tut04 tut05 tut06 tut08 tut09
+	rm -rf tut01 tut02 tut03 tut03_ci tut04 tut05 tut06 tut08 tut09 tut_rewrite
 	rm -rf tut01_pp.o tut02_pp.o tut03_pp.o tut04_parse.o tut05_parse.o
 	rm -rf tut06_sema.o tut07_sema.o tut08_ast.o tut09_ast.o
 	rm -rf input07_1.o input07_2.o input07.html
 	rm -rf Markdown.pl Markdown_1.0.1 Markdown_1.0.1.zip
 	rm -rf SmartyPants.pl SmartyPants_1.5.1 SmartyPants_1.5.1.zip
+
+tut_rewrite: tut_rewrite.o
+	g++ $(LDFLAGS) -o tut_rewrite tut_rewrite.o $(LIBS)
 
 tut09: tut09_ast.o
 	g++ $(LDFLAGS) -o tut09 tut09_ast.o $(LIBS)
@@ -47,7 +50,7 @@ tut04: tut04_parse.o
 	g++ $(LDFLAGS) -o tut04 tut04_parse.o $(LIBS)
 
 tut03_ci: tut03_ci.o
-	g++ $(LDFLAGS) -o tut03 tut03_ci.o $(LIBS)
+	g++ $(LDFLAGS) -o tut03_ci tut03_ci.o $(LIBS)
 
 tut03: tut03_pp.o
 	g++ $(LDFLAGS) -o tut03 tut03_pp.o $(LIBS)
@@ -114,6 +117,7 @@ upload: deploy
 	# My server does not support ssh (hence, no rsync) -- use Transmit :-/
 	osascript upload.scpt
 
+tut_rewrite.o: tut_rewrite.cpp
 tut09_ast.o: tut09_ast.cpp PPContext.h
 tut08_ast.o: tut08_ast.cpp PPContext.h
 tut07_sema.o: tut07_sema.cpp PPContext.h
