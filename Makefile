@@ -10,10 +10,11 @@ CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 # clangAST and clangSema required starting from tut06
 # clangRewrite required in tut09
 # clangDriver, clangSerialization are only required for the ci stuff.
+# clangRewrite is only required for tut_rewrite.
 LDFLAGS= `$(LLVMCONFIG) --ldflags`
 LIBS=  -lclangCodeGen -lclangAnalysis -lclangRewrite -lclangSema -lclangAST \
 			 -lclangFrontend -lclangParse -lclangLex -lclangBasic -lclangDriver \
-			 -lclangSerialization \
+			 -lclangSerialization -lclangRewrite \
 			 -lLLVMCore -lLLVMSupport -lLLVMSystem \
 			 -lLLVMBitWriter -lLLVMBitReader -lLLVMCodeGen -lLLVMAnalysis \
 			 -lLLVMTarget -lLLVMMC

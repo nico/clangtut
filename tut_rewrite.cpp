@@ -26,8 +26,32 @@ using namespace std;
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclGroup.h"
 
 #include "clang/Parse/ParseAST.h"
+
+#include "clang/Rewrite/Rewriter.h"
+
+class RenameMethodConsumer : public clang::ASTConsumer {
+  clang::Rewriter rewriter_;
+  clang::ASTContext* context_;
+ public:
+  void HandleTopLevelSingleDecl(clang::Decl *D);
+
+  // ASTConsumer
+  virtual void Initialize(clang::ASTContext &Context) { context_ = &Context; }
+  virtual void HandleTopLevelDecl(clang::DeclGroupRef D) {
+    for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
+      HandleTopLevelSingleDecl(*I);
+  }
+  virtual void HandleTranslationUnit(clang::ASTContext &C);
+};
+
+void RenameMethodConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
+}
+
+void RenameMethodConsumer::HandleTranslationUnit(clang::ASTContext &C) {
+}
 
 int main(int argc, char* argv[])
 {
@@ -49,8 +73,7 @@ int main(int argc, char* argv[])
 
   // Create Preprocessor object
   clang::DiagnosticClient* diagClient =  // Owned by |diags|.
-      new clang::TextDiagnosticPrinter(llvm::outs(),
-                                       inv.getDiagnosticOpts());
+      new clang::TextDiagnosticPrinter(llvm::outs(), inv.getDiagnosticOpts());
   clang::Diagnostic diags(diagClient);
 
   llvm::OwningPtr<clang::TargetInfo> target(
@@ -95,7 +118,7 @@ int main(int argc, char* argv[])
       selectorTable,
       builtinContext,
       /*size_reserve=*/0);
-  clang::ASTConsumer astConsumer;
+  RenameMethodConsumer astConsumer;
 
   diagClient->BeginSourceFile(inv.getLangOpts(), &pp);
   clang::ParseAST(pp, &astConsumer, astContext, /*PrintStats=*/true);
