@@ -33,35 +33,65 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 #include "clang/Parse/ParseAST.h"
 
 #include "clang/Rewrite/Rewriter.h"
 
-class RenameMethodConsumer : public clang::ASTConsumer {
+// Possible approaches:
+// 1. After parsing everything, find the Decl chain we want to rename, then
+//    find all DeclRefExprs pointing to this chain, and rename these
+// 2. Rename everything directly
+// This uses approach 2.
+class RenameFunctionVisitor :
+    public clang::RecursiveASTVisitor<RenameFunctionVisitor> {
+  clang::Rewriter& rewriter_;
+ public:
+  RenameFunctionVisitor(clang::Rewriter& r) : rewriter_(r) {}
+  bool VisitFunctionDecl(clang::FunctionDecl *D);
+  bool VisitDeclRefExpr(clang::DeclRefExpr *E);
+};
+
+bool RenameFunctionVisitor::VisitFunctionDecl(clang::FunctionDecl *D) {
+fprintf(stderr, "visiting FD %s\n", std::string(D->getName()).c_str());
+  return true;
+}
+
+bool RenameFunctionVisitor::VisitDeclRefExpr(clang::DeclRefExpr* E) {
+  if (clang::FunctionDecl* D = dyn_cast<clang::FunctionDecl>(E->getDecl())) {
+fprintf(stderr, "visiting function DRE %s %p %p\n",
+        std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
+  }
+  return true;
+}
+
+class RenameFunctionConsumer : public clang::ASTConsumer {
   clang::Rewriter rewriter_;
   clang::ASTContext* context_;
   clang::Diagnostic &diags_;
  public:
-  RenameMethodConsumer(clang::Diagnostic& d) : diags_(d) {}
+  RenameFunctionConsumer(clang::Diagnostic& d) : diags_(d) {}
   void HandleTopLevelSingleDecl(clang::Decl *D);
 
   // ASTConsumer
   virtual void Initialize(clang::ASTContext &Context);
   virtual void HandleTopLevelDecl(clang::DeclGroupRef D) {
-    for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
+    for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end();
+        I != E;
+        ++I)
       HandleTopLevelSingleDecl(*I);
   }
   virtual void HandleTranslationUnit(clang::ASTContext &C);
 };
 
-void RenameMethodConsumer::Initialize(clang::ASTContext &Context) {
+void RenameFunctionConsumer::Initialize(clang::ASTContext &Context) {
   context_ = &Context;
   rewriter_.setSourceMgr(Context.getSourceManager(),
                          Context.getLangOptions());
 }
 
-void RenameMethodConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
+void RenameFunctionConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
   if (diags_.hasErrorOccurred())
     return;
 
@@ -74,11 +104,13 @@ void RenameMethodConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
     return;
 
   // We might want to process this decl. We will probably want to check if
-  // it's a function decl (this covers c++ methods too, but not objc functions),
-  // and then recurse into all statements in the function's body.
+  // it's a function decl (this covers c++ methods too, but not objc
+  // functions), and then recurse into all statements in the function's body.
+  RenameFunctionVisitor visitor(rewriter_);
+  visitor.TraverseDecl(D);
 }
 
-void RenameMethodConsumer::HandleTranslationUnit(clang::ASTContext &C) {
+void RenameFunctionConsumer::HandleTranslationUnit(clang::ASTContext &C) {
 }
 
 int main(int argc, char* argv[])
@@ -150,7 +182,7 @@ int main(int argc, char* argv[])
       pp.getSelectorTable(),
       pp.getBuiltinInfo(),
       /*size_reserve=*/0);
-  RenameMethodConsumer astConsumer(diags);
+  RenameFunctionConsumer astConsumer(diags);
 
   diagClient->BeginSourceFile(inv.getLangOpts(), &pp);
   clang::ParseAST(pp, &astConsumer, astContext, /*PrintStats=*/false);
