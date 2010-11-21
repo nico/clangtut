@@ -50,7 +50,7 @@ class RenameFunctionVisitor :
  public:
   RenameFunctionVisitor(clang::Rewriter& r) : rewriter_(r) {}
   bool VisitFunctionDecl(clang::FunctionDecl *D);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *E);
+  bool VisitCallExpr(clang::CallExpr *E);
 };
 
 bool RenameFunctionVisitor::VisitFunctionDecl(clang::FunctionDecl *D) {
@@ -58,9 +58,10 @@ fprintf(stderr, "visiting FD %s\n", std::string(D->getName()).c_str());
   return true;
 }
 
-bool RenameFunctionVisitor::VisitDeclRefExpr(clang::DeclRefExpr* E) {
-  if (clang::FunctionDecl* D = dyn_cast<clang::FunctionDecl>(E->getDecl())) {
-fprintf(stderr, "visiting function DRE %s %p %p\n",
+bool RenameFunctionVisitor::VisitCallExpr(clang::CallExpr* E) {
+  if (clang::FunctionDecl* D =
+      dyn_cast<clang::FunctionDecl>(E->getCalleeDecl())) {
+fprintf(stderr, "visiting function CE %s %p %p\n",
         std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
   }
   return true;
