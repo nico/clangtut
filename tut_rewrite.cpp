@@ -49,20 +49,47 @@ class RenameFunctionVisitor :
   clang::Rewriter& rewriter_;
  public:
   RenameFunctionVisitor(clang::Rewriter& r) : rewriter_(r) {}
-  bool VisitFunctionDecl(clang::FunctionDecl *D);
-  bool VisitCallExpr(clang::CallExpr *E);
+
+  bool VisitFunctionDecl(clang::FunctionDecl *FD);
+  bool VisitUsingDecl(clang::UsingDecl* UD);
+
+  // We could either:
+  // 1. Visit DeclRefExprs and look at those whose getDecl() is a
+  //    FunctionDecl, and also visit MemberExprs (because memfun calls don't
+  //    have a DeclRefExpr child for the function), or
+  // 2. Visit CallExprs, and also visit UnaryOperators (|&|) and
+  //    ImplicitCastExprs, because CallExprs don't cover taking the address
+  //    of a function to call it later.
+  // Approach 1 is a bit nicer because the DeclRefExprs have the right
+  // SourceRange while the CallExprs don't.
+  bool VisitDeclRefExpr(clang::DeclRefExpr *E);
+  bool VisitMemberExpr(clang::MemberExpr *E);
 };
 
-bool RenameFunctionVisitor::VisitFunctionDecl(clang::FunctionDecl *D) {
-fprintf(stderr, "visiting FD %s\n", std::string(D->getName()).c_str());
+bool RenameFunctionVisitor::VisitFunctionDecl(clang::FunctionDecl *FD) {
+fprintf(stderr, "visiting FD %s\n", std::string(FD->getName()).c_str());
   return true;
 }
 
-bool RenameFunctionVisitor::VisitCallExpr(clang::CallExpr* E) {
-  if (clang::FunctionDecl* D =
-      dyn_cast<clang::FunctionDecl>(E->getCalleeDecl())) {
+bool RenameFunctionVisitor::VisitUsingDecl(clang::UsingDecl* UD) {
+fprintf(stderr, "visiting UD %s\n", std::string(UD->getName()).c_str());
+  return true;
+}
+
+bool RenameFunctionVisitor::VisitDeclRefExpr(clang::DeclRefExpr* E) {
+  if (clang::FunctionDecl* D = dyn_cast<clang::FunctionDecl>(E->getDecl())) {
 fprintf(stderr, "visiting function CE %s %p %p\n",
         std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
+  }
+  return true;
+}
+
+bool RenameFunctionVisitor::VisitMemberExpr(clang::MemberExpr *E) {
+  if (clang::FunctionDecl* D =
+      dyn_cast<clang::FunctionDecl>(E->getMemberDecl())) {
+fprintf(stderr, "visiting function CE %s %p %p\n",
+        std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
+    E->getMemberLoc();
   }
   return true;
 }
@@ -101,6 +128,7 @@ void RenameFunctionConsumer::HandleTopLevelSingleDecl(clang::Decl *D) {
   
   // Only rewrite stuff in the main file for now.
   // FIXME(thakis): Will want to rewrite stuff in headers too at some point.
+  //                Might require multiple Rewriter objects somehow.
   if (!context_->getSourceManager().isFromMainFile(Loc))
     return;
 
