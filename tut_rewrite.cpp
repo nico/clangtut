@@ -47,6 +47,12 @@
 class RenameFunctionVisitor :
     public clang::RecursiveASTVisitor<RenameFunctionVisitor> {
   clang::Rewriter& rewriter_;
+
+  // Decides if a given FunctionDecl should be renamed.
+  bool shouldRename(clang::FunctionDecl* FD);
+
+  // Renames the symbol at a given SourceLocation.
+  void doRename(clang::SourceLocation Loc);
  public:
   RenameFunctionVisitor(clang::Rewriter& r) : rewriter_(r) {}
 
@@ -66,20 +72,44 @@ class RenameFunctionVisitor :
   bool VisitMemberExpr(clang::MemberExpr *E);
 };
 
+bool RenameFunctionVisitor::shouldRename(clang::FunctionDecl* FD) {
+  return false;
+}
+
+void RenameFunctionVisitor::doRename(clang::SourceLocation Loc) {
+  /*
+  static unsigned MeasureTokenLength(SourceLocation Loc,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts);
+  */
+  unsigned Len = clang::Lexer::MeasureTokenLength(
+      Loc, rewriter_.getSourceMgr(), rewriter_.getLangOpts());
+  bool failure = rewriter_.ReplaceText(Loc, Len, "MyNewName");
+  assert(!failure);
+}
+
 bool RenameFunctionVisitor::VisitFunctionDecl(clang::FunctionDecl *FD) {
 fprintf(stderr, "visiting FD %s\n", std::string(FD->getName()).c_str());
+  if (shouldRename(FD))
+    doRename(FD->getLocation());
   return true;
 }
 
 bool RenameFunctionVisitor::VisitUsingDecl(clang::UsingDecl* UD) {
 fprintf(stderr, "visiting UD %s\n", std::string(UD->getName()).c_str());
+// FIXME
+  //if (shouldRename(UD))
+    //doRename(UD->getLocation());
   return true;
 }
 
 bool RenameFunctionVisitor::VisitDeclRefExpr(clang::DeclRefExpr* E) {
   if (clang::FunctionDecl* D = dyn_cast<clang::FunctionDecl>(E->getDecl())) {
-fprintf(stderr, "visiting function CE %s %p %p\n",
-        std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
+fprintf(
+stderr, "visiting function CE %s %p %p\n",
+std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
+    if (shouldRename(D))
+      doRename(E->getLocation());
   }
   return true;
 }
@@ -89,7 +119,8 @@ bool RenameFunctionVisitor::VisitMemberExpr(clang::MemberExpr *E) {
       dyn_cast<clang::FunctionDecl>(E->getMemberDecl())) {
 fprintf(stderr, "visiting function CE %s %p %p\n",
         std::string(D->getName()).c_str(), D, D->getCanonicalDecl());
-    E->getMemberLoc();
+    if (shouldRename(D))
+      doRename(E->getMemberLoc());
   }
   return true;
 }
