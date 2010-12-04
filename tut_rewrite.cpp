@@ -43,6 +43,12 @@
 
 #include "clang/Rewrite/Rewriter.h"
 
+#if 0
+  // How to look up a name:
+  LookupResult R(Sema, NameInfo, LookupOrdinaryName);
+  Sema.LookupQualifiedName(R, LookupContext);
+#endif
+
 // Possible approaches:
 // 1. After parsing everything, find the Decl chain we want to rename, then
 //    find all DeclRefExprs pointing to this chain, and rename these
@@ -93,17 +99,20 @@ void RenameFunctionVisitor::doRename(clang::SourceLocation Loc) {
 }
 
 bool RenameFunctionVisitor::VisitFunctionDecl(clang::FunctionDecl *FD) {
-fprintf(stderr, "visiting FD %s\n", std::string(FD->getName()).c_str());
+fprintf(stderr, "visiting FD %s %p\n", std::string(FD->getName()).c_str(), (void*)FD);
   if (shouldRename(FD))
     doRename(FD->getLocation());
   return true;
 }
 
 bool RenameFunctionVisitor::VisitUsingDecl(clang::UsingDecl* UD) {
-fprintf(stderr, "visiting UD %s\n", std::string(UD->getName()).c_str());
-// FIXME
-  //if (shouldRename(UD))
-    //doRename(UD->getLocation());
+  assert(UD->shadow_size() == 1);  // TODO: when is this not true?
+  if (clang::FunctionDecl* D =
+      dyn_cast<clang::FunctionDecl>(UD->shadow_begin()->getTargetDecl())) {
+fprintf(stderr, "visiting UD %s %p %s %p\n", std::string(UD->getName()).c_str(), (void*)UD, std::string(D->getName()).c_str(), (void*)D);
+    if (shouldRename(D))
+      doRename(UD->getLocation());
+  }
   return true;
 }
 
