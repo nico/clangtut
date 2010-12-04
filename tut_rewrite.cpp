@@ -18,6 +18,10 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/Version.h"
+#if CLANG_VERSION_MINOR >= 9
+#include "clang/Basic/DiagnosticIDs.h"
+#endif
 
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
@@ -177,7 +181,14 @@ int main(int argc, char* argv[])
 {
   // Parse clang args.
   clang::DiagnosticOptions bootstrapDiagOptions;
+#if CLANG_VERSION_MINOR >= 9
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
+      new clang::DiagnosticIDs());
+#endif
   clang::Diagnostic bootstrapDiag(
+#if CLANG_VERSION_MINOR >= 9
+      DiagID,
+#endif
       new clang::TextDiagnosticPrinter(llvm::outs(), bootstrapDiagOptions));
   clang::CompilerInvocation inv;
   clang::CompilerInvocation::CreateFromArgs(
@@ -194,7 +205,11 @@ int main(int argc, char* argv[])
   // Create Preprocessor object
   clang::DiagnosticClient* diagClient =  // Owned by |diags|.
       new clang::TextDiagnosticPrinter(llvm::outs(), inv.getDiagnosticOpts());
-  clang::Diagnostic diags(diagClient);
+  clang::Diagnostic diags(
+#if CLANG_VERSION_MINOR >= 9
+      DiagID,
+#endif
+      diagClient);
 
   // Called by CompilerInstance::createDiagnostics(), which does some stuff
   // we don't want (?). FIXME(thakis): Use CompilerInstance instead?
@@ -203,8 +218,14 @@ int main(int argc, char* argv[])
   llvm::OwningPtr<clang::TargetInfo> target(
       clang::TargetInfo::CreateTargetInfo(diags, inv.getTargetOpts()));
 
+#if CLANG_VERSION_MINOR >= 9
+  clang::FileSystemOptions fsOpts;
+  clang::FileManager fm(fsOpts);
+  clang::SourceManager sm(diags, fm);
+#else
   clang::FileManager fm;
   clang::SourceManager sm(diags);
+#endif
 
   clang::HeaderSearch headers(fm);
   clang::Preprocessor pp(diags, inv.getLangOpts(), *target, sm, headers);

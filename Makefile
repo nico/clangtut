@@ -1,7 +1,7 @@
-LLVMHOME=/Users/nico/src/llvm-2.8
-LLVMCONFIG=$(LLVMHOME)/Release/bin/llvm-config
-#LLVMHOME=/Users/thakis/src/llvm-rw
-#LLVMCONFIG=$(LLVMHOME)/Debug+Asserts/bin/llvm-config
+#LLVMHOME=/Users/nico/src/llvm-2.8
+#LLVMCONFIG=$(LLVMHOME)/Release/bin/llvm-config
+LLVMHOME=/Users/thakis/src/llvm-rw
+LLVMCONFIG=$(LLVMHOME)/Debug+Asserts/bin/llvm-config
 CXXFLAGS=-I$(LLVMHOME)/tools/clang/include \
 		 -fno-rtti \
 		 `$(LLVMCONFIG) --cxxflags`
