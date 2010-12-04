@@ -19,6 +19,9 @@ void function();
 
 void caller() {
   function();
+
+  Derived d;
+  d.function();
 }
 
 void function() {
